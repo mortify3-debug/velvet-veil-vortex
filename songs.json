@@ -1,21 +1,21 @@
 [
   {
-    "title": "Дворец",
+    "title": "Dvorets",
     "src": "./music/Dvorets.mp3",
     "cover": "./assets/cover.png"
   },
   {
-    "title": "Рекурсия миров",
+    "title": "Rekursiya mirov",
     "src": "./music/Rekursiya%20mirov.mp3",
     "cover": "./assets/cover.png"
   },
   {
-    "title": "Симуляция",
+    "title": "Simulyacia",
     "src": "./music/Simulyacia.mp3",
     "cover": "./assets/cover.png"
   },
   {
-    "title": "Во сне я...",
+    "title": "Vo sne ya..",
     "src": "./music/Vo%20sne%20ya...mp3",
     "cover": "./assets/cover.png"
   }
