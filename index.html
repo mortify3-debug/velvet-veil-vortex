@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Velvet Veil Vortex — атмосферный рок. Новые альбомы, концерты, музыка, видео и мерч.">
+  <title>Velvet Veil Vortex | Official</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌀</text></svg>">
+</head>
+<body>
+  <!-- Navigation -->
+  <nav class="navbar" id="navbar">
+    <div class="nav-container">
+      <a href="#hero" class="logo">Velvet Veil Vortex</a>
+      <button class="nav-toggle" id="navToggle" aria-label="Меню">
+        <span></span><span></span><span></span>
+      </button>
+      <ul class="nav-menu" id="navMenu">
+        <li><a href="#music">Музыка</a></li>
+        <li><a href="#tour">Концерты</a></li>
+        <li><a href="#about">О группе</a></li>
+        <li><a href="#video">Видео</a></li>
+        <li><a href="#news">Новости</a></li>
+        <li><a href="#gallery">Галерея</a></li>
+        <li><a href="#merch">Мерч</a></li>
+        <li><a href="#contact">Контакты</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- 1. HERO -->
+  <header class="hero" id="hero">
+    <div class="hero-bg">
+      <!-- Замените на своё фото/видео группы -->
+      <img src="https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=1920&q=80" alt="Velvet Veil Vortex" class="hero-image">
+      <div class="hero-overlay"></div>
+    </div>
+    <div class="hero-content">
+      <p class="hero-tagline">Атмосферный рок · С 2019</p>
+      <h1 class="hero-title">Velvet Veil Vortex</h1>
+      <p class="hero-subtitle">Там, где бархат встречается с вихрем</p>
+      <div class="hero-buttons">
+        <a href="#music" class="btn btn-primary">Слушать</a>
+        <a href="#tour" class="btn btn-outline">Ближайший концерт</a>
+        <a href="#music" class="btn btn-ghost">Новый альбом</a>
+      </div>
+    </div>
+    <div class="scroll-indicator">
+      <span></span>
+    </div>
+  </header>
+
+  <!-- 2. МУЗЫКА -->
+  <section class="section music" id="music">
+    <div class="container">
+      <h2 class="section-title">Музыка</h2>
+      <p class="section-subtitle">Последние релизы и полная дискография</p>
+
+      <!-- Последний релиз -->
+      <div class="latest-release">
+        <div class="release-cover">
+          <img src="https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=600&q=80" alt="Обложка альбома Echoes of the Veil">
+          <div class="play-overlay" data-track="latest">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+          </div>
+        </div>
+        <div class="release-info">
+          <span class="release-label">Новый альбом</span>
+          <h3>Echoes of the Veil</h3>
+          <p class="release-meta">2025 · 11 треков · 48 мин</p>
+          <p class="release-desc">Атмосферный концептуальный альбом о границах между реальностью и сном. Гитарные стены, бархатный вокал и вихревые ритмы.</p>
+          
+          <!-- Встроенный аудио-плеер (замените src на свои MP3) -->
+          <div class="audio-player" id="mainPlayer">
+            <audio id="audioElement" preload="metadata">
+              <!-- Пример: замените на реальный файл /assets/music/track1.mp3 -->
+              <source src="" type="audio/mpeg">
+              Ваш браузер не поддерживает аудио.
+            </audio>
+            <div class="player-controls">
+              <button class="player-btn" id="playBtn" aria-label="Play">▶</button>
+              <div class="player-progress">
+                <div class="progress-bar" id="progressBar"><div class="progress-fill" id="progressFill"></div></div>
+                <div class="time"><span id="currentTime">0:00</span> / <span id="duration">0:00</span></div>
+              </div>
+              <button class="player-btn" id="muteBtn" aria-label="Mute">🔊</button>
+            </div>
+            <p class="player-note">Замените src в &lt;audio&gt; на свои MP3-файлы из папки /assets/music/</p>
+          </div>
+
+          <div class="platform-links">
+            <a href="https://open.spotify.com" target="_blank" rel="noopener" class="platform-btn spotify">Spotify</a>
+            <a href="https://music.apple.com" target="_blank" rel="noopener" class="platform-btn apple">Apple Music</a>
+            <a href="https://music.youtube.com" target="_blank" rel="noopener" class="platform-btn youtube">YouTube Music</a>
+            <a href="https://bandcamp.com" target="_blank" rel="noopener" class="platform-btn bandcamp">Bandcamp</a>
+            <a href="/assets/music/" class="platform-btn download">Скачать MP3</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Дискография -->
+      <h3 class="subsection-title">Дискография</h3>
+      <div class="discography-grid">
+        <article class="album-card">
+          <img src="https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=400&q=80" alt="Echoes of the Veil">
+          <div class="album-info">
+            <h4>Echoes of the Veil</h4>
+            <span>Альбом · 2025</span>
+            <a href="#" class="album-link">Слушать</a>
+          </div>
+        </article>
+        <article class="album-card">
+          <img src="https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=400&q=80" alt="Vortex Dreams">
+          <div class="album-info">
+            <h4>Vortex Dreams</h4>
+            <span>EP · 2023</span>
+            <a href="#" class="album-link">Слушать</a>
+          </div>
+        </article>
+        <article class="album-card">
+          <img src="https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=400&q=80" alt="Velvet Nights">
+          <div class="album-info">
+            <h4>Velvet Nights</h4>
+            <span>Альбом · 2021</span>
+            <a href="#" class="album-link">Слушать</a>
+          </div>
+        </article>
+        <article class="album-card">
+          <img src="https://images.unsplash.com/photo-1459749411175-04bf529277ea?w=400&q=80" alt="First Veil">
+          <div class="album-info">
+            <h4>First Veil</h4>
+            <span>Сингл · 2019</span>
+            <a href="#" class="album-link">Слушать</a>
+          </div>
+        </article>
+      </div>
+
+      <!-- Встроенные плееры -->
+      <div class="embeds">
+        <h3 class="subsection-title">Слушать на площадках</h3>
+        <div class="embed-grid">
+          <div class="embed-item">
+            <iframe style="border-radius:12px" src="https://open.spotify.com/embed/album/4aawyAB9vmqN3uQ7FjRGTy?utm_source=generator" width="100%" height="352" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
+            <p class="embed-note">Замените на свой Spotify album/playlist ID</p>
+          </div>
+          <div class="embed-item">
+            <iframe allow="autoplay *; encrypted-media *; fullscreen *; clipboard-write" frameborder="0" height="450" style="width:100%;max-width:660px;overflow:hidden;border-radius:10px;" sandbox="allow-forms allow-popups allow-same-origin allow-scripts allow-storage-access-by-user-activation allow-top-navigation-by-user-activation" src="https://embed.music.apple.com/us/album/echoes-of-the-veil/1234567890"></iframe>
+            <p class="embed-note">Замените на свой Apple Music embed</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. КОНЦЕРТЫ / ТУР -->
+  <section class="section tour" id="tour">
+    <div class="container">
+      <h2 class="section-title">Концерты</h2>
+      <p class="section-subtitle">Ближайшие даты</p>
+
+      <div class="tour-list" id="tourList">
+        <!-- Если есть даты — показываем список -->
+        <div class="tour-item">
+          <div class="tour-date">
+            <span class="day">15</span>
+            <span class="month">ОКТ</span>
+            <span class="year">2026</span>
+          </div>
+          <div class="tour-info">
+            <h3>Москва · Клуб «16 Тонн»</h3>
+            <p>Специальный гость: TBD</p>
+          </div>
+          <a href="#" class="btn btn-small" target="_blank" rel="noopener">Билеты</a>
+        </div>
+        <div class="tour-item">
+          <div class="tour-date">
+            <span class="day">22</span>
+            <span class="month">ОКТ</span>
+            <span class="year">2026</span>
+          </div>
+          <div class="tour-info">
+            <h3>Санкт-Петербург · A2 Green Concert</h3>
+            <p>Сольный концерт</p>
+          </div>
+          <a href="#" class="btn btn-small" target="_blank" rel="noopener">Билеты</a>
+        </div>
+        <div class="tour-item">
+          <div class="tour-date">
+            <span class="day">05</span>
+            <span class="month">НОЯ</span>
+            <span class="year">2026</span>
+          </div>
+          <div class="tour-info">
+            <h3>Екатеринбург · Tele-Club</h3>
+            <p>В рамках тура «Echoes»</p>
+          </div>
+          <a href="#" class="btn btn-small" target="_blank" rel="noopener">Билеты</a>
+        </div>
+      </div>
+
+      <!-- Если дат нет — раскомментируйте этот блок и скройте .tour-list -->
+      <!--
+      <div class="tour-empty">
+        <h3>Скоро анонс тура</h3>
+        <p>Мы готовим большой тур в поддержку нового альбома. Следите за новостями!</p>
+        <p>Принимаем заявки на концерты и фестивали.</p>
+        <a href="mailto:booking@velvetveilvortex.com" class="btn btn-primary">Написать на букинг</a>
+      </div>
+      -->
+    </div>
+  </section>
+
+  <!-- 4. О ГРУППЕ -->
+  <section class="section about" id="about">
+    <div class="container">
+      <h2 class="section-title">О группе</h2>
+      <div class="about-content">
+        <div class="about-text">
+          <p>Velvet Veil Vortex родились в 2019 году на пересечении пост-рока, готик-рока и атмосферного метала. Название отражает суть музыки — бархатная тьма, сквозь которую прорывается вихрь эмоций.</p>
+          <p>Группа быстро завоевала внимание андеграундной сцены благодаря мощным живым выступлениям и концептуальным альбомам. Каждый релиз — это путешествие: от интимных акустических моментов до эпических гитарных стен.</p>
+          <p>Сейчас группа работает над следующим материалом и готовит большой тур.</p>
+        </div>
+      </div>
+
+      <h3 class="subsection-title">Состав</h3>
+      <div class="members-grid">
+        <article class="member-card">
+          <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&q=80" alt="Алекс Вейл">
+          <div class="member-info">
+            <h4>Алекс Вейл</h4>
+            <span>Вокал / Ритм-гитара</span>
+          </div>
+        </article>
+        <article class="member-card">
+          <img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&q=80" alt="Кай Вортекс">
+          <div class="member-info">
+            <h4>Кай Вортекс</h4>
+            <span>Лид-гитара / Бэк-вокал</span>
+          </div>
+        </article>
+        <article class="member-card">
+          <img src="https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=400&q=80" alt="Лена Силк">
+          <div class="member-info">
+            <h4>Лена Силк</h4>
+            <span>Бас / Синтезаторы</span>
+          </div>
+        </article>
+        <article class="member-card">
+          <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&q=80" alt="Мира Шейд">
+          <div class="member-info">
+            <h4>Мира Шейд</h4>
+            <span>Барабаны / Перкуссия</span>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5. ВИДЕО -->
+  <section class="section video" id="video">
+    <div class="container">
+      <h2 class="section-title">Видео</h2>
+      <p class="section-subtitle">Клипы, лайвы и закулисье</p>
+
+      <div class="video-grid">
+        <div class="video-item featured">
+          <div class="video-wrapper">
+            <iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ" title="Official Video" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe>
+          </div>
+          <h3>Echoes of the Veil — Official Video</h3>
+        </div>
+        <div class="video-item">
+          <div class="video-wrapper">
+            <iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ" title="Live" frameborder="0" allowfullscreen loading="lazy"></iframe>
+          </div>
+          <h3>Live at 16 Tons (2024)</h3>
+        </div>
+        <div class="video-item">
+          <div class="video-wrapper">
+            <iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ" title="Behind the scenes" frameborder="0" allowfullscreen loading="lazy"></iframe>
+          </div>
+          <h3>За кулисами записи</h3>
+        </div>
+      </div>
+      <div class="text-center">
+        <a href="https://youtube.com" target="_blank" rel="noopener" class="btn btn-outline">Смотреть все на YouTube</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- НОВОСТИ / БЛОГ -->
+  <section class="section news" id="news">
+    <div class="container">
+      <h2 class="section-title">Новости</h2>
+      <div class="news-grid">
+        <article class="news-card">
+          <time datetime="2026-09-20">20 сентября 2026</time>
+          <h3>Анонс осеннего тура</h3>
+          <p>Мы объявляем даты в Москве, Петербурге и Екатеринбурге. Билеты уже в продаже!</p>
+          <a href="#" class="read-more">Читать →</a>
+        </article>
+        <article class="news-card">
+          <time datetime="2026-08-15">15 августа 2026</time>
+          <h3>Студийный дневник: трек 7</h3>
+          <p>Работаем над самым атмосферным треком альбома. Записали струнные и хор.</p>
+          <a href="#" class="read-more">Читать →</a>
+        </article>
+        <article class="news-card">
+          <time datetime="2026-07-01">1 июля 2026</time>
+          <h3>Новый клип «Velvet Storm»</h3>
+          <p>Премьера официального видео состоялась сегодня. Смотрите на нашем канале.</p>
+          <a href="#" class="read-more">Читать →</a>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ГАЛЕРЕЯ -->
+  <section class="section gallery" id="gallery">
+    <div class="container">
+      <h2 class="section-title">Галерея</h2>
+      <div class="gallery-tabs">
+        <button class="tab active" data-tab="concerts">Концерты</button>
+        <button class="tab" data-tab="studio">Студия</button>
+        <button class="tab" data-tab="press">Press</button>
+      </div>
+      <div class="gallery-grid" id="galleryGrid">
+        <div class="gallery-item" data-category="concerts">
+          <img src="https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=600&q=80" alt="Концерт">
+        </div>
+        <div class="gallery-item" data-category="concerts">
+          <img src="https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=600&q=80" alt="Концерт">
+        </div>
+        <div class="gallery-item" data-category="studio">
+          <img src="https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?w=600&q=80" alt="Студия">
+        </div>
+        <div class="gallery-item" data-category="studio">
+          <img src="https://images.unsplash.com/photo-1519682337058-a94d519337bc?w=600&q=80" alt="Студия">
+        </div>
+        <div class="gallery-item" data-category="press">
+          <img src="https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=600&q=80" alt="Press">
+        </div>
+        <div class="gallery-item" data-category="press">
+          <img src="https://images.unsplash.com/photo-1514320291840-309bb0d3a66b?w=600&q=80" alt="Press">
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- МЕРЧ -->
+  <section class="section merch" id="merch">
+    <div class="container">
+      <h2 class="section-title">Мерч</h2>
+      <p class="section-subtitle">Официальная атрибутика</p>
+      <div class="merch-grid">
+        <article class="merch-card">
+          <img src="https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400&q=80" alt="Футболка">
+          <h3>Футболка «Echoes»</h3>
+          <p class="price">2 500 ₽</p>
+          <a href="https://bandcamp.com" target="_blank" rel="noopener" class="btn btn-small">Купить</a>
+        </article>
+        <article class="merch-card">
+          <img src="https://images.unsplash.com/photo-1606144042614-b2417e99c4e3?w=400&q=80" alt="Винил">
+          <h3>Винил «Echoes of the Veil»</h3>
+          <p class="price">3 900 ₽</p>
+          <a href="https://bandcamp.com" target="_blank" rel="noopener" class="btn btn-small">Купить</a>
+        </article>
+        <article class="merch-card">
+          <img src="https://images.unsplash.com/photo-1581833971358-2c8b550f87b3?w=400&q=80" alt="Постер">
+          <h3>Постер тура 2026</h3>
+          <p class="price">1 200 ₽</p>
+          <a href="https://bandcamp.com" target="_blank" rel="noopener" class="btn btn-small">Купить</a>
+        </article>
+      </div>
+      <div class="text-center" style="margin-top: 2rem;">
+        <a href="https://bandcamp.com" target="_blank" rel="noopener" class="btn btn-outline">Весь магазин на Bandcamp</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- TIMELINE -->
+  <section class="section timeline-section" id="timeline">
+    <div class="container">
+      <h2 class="section-title">История</h2>
+      <div class="timeline">
+        <div class="timeline-item">
+          <div class="timeline-year">2019</div>
+          <div class="timeline-content">
+            <h3>Рождение группы</h3>
+            <p>Первый сингл «First Veil» и первые концерты в Москве.</p>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-year">2021</div>
+          <div class="timeline-content">
+            <h3>Дебютный альбом</h3>
+            <p>«Velvet Nights» — первый полноформатник. Тур по России.</p>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-year">2023</div>
+          <div class="timeline-content">
+            <h3>EP «Vortex Dreams»</h3>
+            <p>Экспериментальный релиз и рост фан-базы.</p>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-year">2025</div>
+          <div class="timeline-content">
+            <h3>«Echoes of the Veil»</h3>
+            <p>Концептуальный альбом и подготовка большого тура.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PRESS KIT + NEWSLETTER + FAN ZONE -->
+  <section class="section extras" id="press">
+    <div class="container">
+      <div class="extras-grid">
+        <div class="extra-card">
+          <h3>Press Kit</h3>
+          <p>Фото в высоком разрешении, био на русском и английском, логотипы, технические райдеры.</p>
+          <a href="#" class="btn btn-small">Скачать Press Kit (ZIP)</a>
+        </div>
+        <div class="extra-card">
+          <h3>Рассылка</h3>
+          <p>Узнавай о концертах и релизах первым.</p>
+          <form class="newsletter-form" id="newsletterForm">
+            <input type="email" placeholder="Ваш email" required>
+            <button type="submit" class="btn btn-primary">Подписаться</button>
+          </form>
+          <p class="form-note">Форма-заглушка. Подключите Formspree / Netlify Forms / Cloudflare Workers.</p>
+        </div>
+        <div class="extra-card">
+          <h3>Фан-зона</h3>
+          <p>Сообщество фанатов</p>
+          <div class="fan-links">
+            <a href="https://t.me" target="_blank" rel="noopener">Telegram</a>
+            <a href="https://discord.com" target="_blank" rel="noopener">Discord</a>
+            <a href="#" target="_blank" rel="noopener">Закрытый чат</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- КОНТАКТЫ / БУКИНГ -->
+  <section class="section contact" id="contact">
+    <div class="container">
+      <h2 class="section-title">Контакты</h2>
+      <div class="contact-grid">
+        <div class="contact-card">
+          <h3>Букинг / Концерты</h3>
+          <a href="mailto:booking@velvetveilvortex.com">booking@velvetveilvortex.com</a>
+        </div>
+        <div class="contact-card">
+          <h3>Пресса / Интервью</h3>
+          <a href="mailto:press@velvetveilvortex.com">press@velvetveilvortex.com</a>
+        </div>
+        <div class="contact-card">
+          <h3>Общие вопросы</h3>
+          <a href="mailto:info@velvetveilvortex.com">info@velvetveilvortex.com</a>
+        </div>
+      </div>
+      <div class="social-links">
+        <a href="https://instagram.com" target="_blank" rel="noopener" aria-label="Instagram">Instagram</a>
+        <a href="https://vk.com" target="_blank" rel="noopener" aria-label="VK">VK</a>
+        <a href="https://t.me" target="_blank" rel="noopener" aria-label="Telegram">Telegram</a>
+        <a href="https://youtube.com" target="_blank" rel="noopener" aria-label="YouTube">YouTube</a>
+        <a href="https://bandcamp.com" target="_blank" rel="noopener" aria-label="Bandcamp">Bandcamp</a>
+        <a href="https://open.spotify.com" target="_blank" rel="noopener" aria-label="Spotify">Spotify</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="container">
+      <p>© 2019–2026 Velvet Veil Vortex. Все права защищены.</p>
+      <p class="footer-note">Сайт размещён на Cloudflare Pages</p>
+    </div>
+  </footer>
+
+  <script src="js/script.js"></script>
+</body>
+</html>
