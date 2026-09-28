@@ -10,21 +10,21 @@
 <body>
 <header class="topbar">
   <a class="brand" href="#home" aria-label="Velvet Veil Vortex">VELVET VEIL VORTEX</a>
-  <nav><a href="#home">HOME</a><a href="#music">MUSIC</a></nav>
+  <nav><a href="#home">ГЛАВНАЯ</a><a href="#music">МУЗЫКА</a></nav>
 </header>
 <main>
 <section id="home" class="hero">
   <img class="hero-cover" src="./assets/cover.png" alt="Velvet Veil Vortex">
   <div class="hero-shade"></div>
   <div class="hero-content">
-    <div class="eyebrow">ROCK / CYBERPUNK / NIGHT CITY</div>
+    <div class="eyebrow">РОК / КИБЕРПАНК / NIGHT CITY</div>
     <h1>VELVET VEIL<br><span>VORTEX</span></h1>
-    <p>LOUDER THAN YOUR FEARS</p>
-    <a class="hero-play" href="#music">PLAY MUSIC <span>▶</span></a>
+    <p>ГРОМЧЕ ТВОИХ СТРАХОВ</p>
+    <a class="hero-play" href="#music">СЛУШАТЬ МУЗЫКУ <span>▶</span></a>
   </div>
 </section>
 <section id="music" class="music-section">
-  <div class="section-head"><div><div class="eyebrow">LATEST TRACKS</div><h2>MUSIC</h2></div><span id="track-count" class="count"></span></div>
+  <div class="section-head"><div><div class="eyebrow">ПОСЛЕДНИЕ ТРЕКИ</div><h2>МУЗЫКА</h2></div><span id="track-count" class="count"></span></div>
   <div id="track-list" class="track-list" aria-live="polite"></div>
   <div id="empty" class="empty" hidden>Добавь MP3 в папку <b>music/</b> и сделай Commit в GitHub.</div>
 </section>
@@ -36,9 +36,9 @@
     <div class="progress-row"><span id="current-time">0:00</span><input id="seek" type="range" min="0" max="100" value="0"><span id="duration">0:00</span></div>
   </div>
   <div class="player-controls">
-    <button id="prev" aria-label="Предыдущая">⏮</button><button id="play" class="play-btn" aria-label="Play">▶</button><button id="next" aria-label="Следующая">⏭</button>
+    <button id="prev" aria-label="Предыдущая">⏮</button><button id="play" class="play-btn" aria-label="Воспроизвести">▶</button><button id="next" aria-label="Следующая">⏭</button>
   </div>
-  <a id="player-download" class="download" href="#" download hidden>⇩</a>
+  <a id="player-download" class="download" href="#" download hidden aria-label="Скачать">⇩</a>
   <audio id="audio" preload="metadata"></audio>
 </div>
 <script src="./app.js"></script>

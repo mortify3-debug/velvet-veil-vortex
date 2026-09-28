@@ -1,1 +1,41 @@
 :root{--bg:#07070a;--panel:#101016;--line:#2a2631;--text:#f6f4f7;--muted:#aaa4b1;--pink:#ff2d91;--cyan:#28e7ff}*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;padding-bottom:104px}.topbar{height:68px;position:fixed;z-index:20;top:0;left:0;right:0;display:flex;align-items:center;justify-content:space-between;padding:0 5vw;background:rgba(5,5,8,.78);backdrop-filter:blur(14px);border-bottom:1px solid #ffffff12}.brand{font-weight:900;letter-spacing:.12em;color:#fff;text-decoration:none;font-size:14px}.topbar nav{display:flex;gap:32px}.topbar nav a{color:#fff;text-decoration:none;font-weight:800;font-size:13px;letter-spacing:.18em}.hero{height:min(820px,100vh);min-height:600px;position:relative;overflow:hidden}.hero-cover{width:100%;height:100%;object-fit:cover;object-position:center;display:block}.hero-shade{position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,.72),rgba(0,0,0,.12) 65%,rgba(0,0,0,.55)),linear-gradient(0deg,#07070a 0%,transparent 35%)}.hero-content{position:absolute;left:8vw;top:50%;transform:translateY(-42%);max-width:680px}.eyebrow{color:var(--cyan);font-size:11px;font-weight:900;letter-spacing:.22em}.hero h1{font-size:clamp(48px,8vw,108px);line-height:.83;margin:16px 0;font-weight:1000;letter-spacing:-.06em}.hero h1 span{color:var(--pink)}.hero p{font-weight:900;letter-spacing:.35em;color:#ddd}.hero-play{display:inline-flex;gap:15px;align-items:center;margin-top:22px;padding:15px 23px;background:var(--pink);color:#fff;text-decoration:none;font-weight:900;letter-spacing:.12em;clip-path:polygon(0 0,100% 0,94% 100%,0 100%)}.music-section{max-width:1180px;margin:0 auto;padding:70px 5vw 130px}.section-head{display:flex;justify-content:space-between;align-items:end;border-bottom:1px solid var(--line);padding-bottom:20px;margin-bottom:22px}.section-head h2{font-size:54px;margin:7px 0 0;letter-spacing:-.05em}.count{color:var(--muted);font-size:12px;letter-spacing:.16em}.track-list{display:grid;gap:12px}.track{display:grid;grid-template-columns:96px 1fr auto;align-items:center;gap:20px;padding:12px;background:linear-gradient(90deg,#121219,#0c0c11);border:1px solid var(--line);transition:.2s}.track.active{border-color:#ff2d9166;box-shadow:0 0 25px #ff2d9114}.track-cover{position:relative;width:96px;height:96px}.track-cover img{width:100%;height:100%;object-fit:cover}.mini-play{position:absolute;left:8px;bottom:8px;width:36px;height:36px;border:0;border-radius:50%;background:var(--pink);color:#fff;font-weight:900;cursor:pointer}.track-info{min-width:0;position:relative;padding-left:8px}.track-no{color:var(--cyan);font-size:11px;letter-spacing:.15em}.track h3{font-size:21px;margin:7px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.track-duration{color:var(--muted);font-size:13px}.track-actions{display:flex;gap:9px;align-items:center}.card-play,.download-card{font:inherit;font-weight:900;letter-spacing:.1em;font-size:11px;text-decoration:none;cursor:pointer;padding:13px 16px;border:1px solid #ffffff2c;background:transparent;color:#fff}.card-play{background:var(--pink);border-color:var(--pink)}.download-card:hover,.card-play:hover{filter:brightness(1.15)}.empty{padding:50px 20px;text-align:center;color:var(--muted);border:1px dashed var(--line)}.player{position:fixed;z-index:30;bottom:0;left:0;right:0;min-height:82px;background:rgba(9,9,13,.96);border-top:1px solid #ffffff1c;backdrop-filter:blur(18px);display:grid;grid-template-columns:58px minmax(180px,1fr) auto auto;gap:14px;align-items:center;padding:10px 24px}.player-art img{width:58px;height:58px;object-fit:cover}.player-title{font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.progress-row{display:flex;gap:8px;align-items:center;font-size:10px;color:var(--muted)}#seek{width:100%;accent-color:var(--pink)}.player-controls{display:flex;gap:8px;align-items:center}.player-controls button{width:38px;height:38px;border-radius:50%;border:1px solid #ffffff28;background:#17171e;color:#fff;cursor:pointer}.player-controls .play-btn{background:var(--pink);border-color:var(--pink);font-weight:900}.download{width:38px;height:38px;border:1px solid #ffffff28;display:grid;place-items:center;color:#fff;text-decoration:none;font-size:19px}audio{display:none}@media(max-width:700px){body{padding-bottom:154px}.topbar{height:58px;padding:0 18px}.brand{font-size:10px;letter-spacing:.08em}.topbar nav{gap:18px}.topbar nav a{font-size:11px}.hero{height:72vh;min-height:520px}.hero-content{left:22px;right:22px;top:auto;bottom:90px;transform:none}.hero h1{font-size:clamp(42px,15vw,72px)}.hero p{font-size:10px;letter-spacing:.2em}.music-section{padding:46px 14px 90px}.section-head h2{font-size:42px}.track{grid-template-columns:70px 1fr;gap:12px;padding:10px}.track-cover{width:70px;height:70px;grid-row:span 2}.track h3{font-size:16px;margin:4px 0}.track-actions{grid-column:2;justify-content:flex-start}.card-play,.download-card{padding:10px 12px;font-size:10px}.player{min-height:142px;padding:10px 12px;grid-template-columns:52px 1fr auto;gap:10px}.player-art img{width:52px;height:52px}.player-main{grid-column:1/3}.player-controls{grid-column:3;grid-row:1/3;display:flex;flex-direction:column}.player-download{grid-column:3}.player-title{font-size:13px}.hero-play{padding:13px 18px}.empty{font-size:13px}}
+
+/* Удобная перемотка мышью/пальцем */
+#seek{
+  appearance:none;
+  -webkit-appearance:none;
+  height:6px;
+  min-width:120px;
+  cursor:pointer;
+  touch-action:none;
+}
+#seek::-webkit-slider-runnable-track{
+  height:6px;
+  border-radius:6px;
+  background:#3a3542;
+}
+#seek::-webkit-slider-thumb{
+  -webkit-appearance:none;
+  appearance:none;
+  width:16px;
+  height:16px;
+  margin-top:-5px;
+  border-radius:50%;
+  background:var(--pink);
+  cursor:grab;
+}
+#seek:active::-webkit-slider-thumb{cursor:grabbing}
+#seek::-moz-range-track{
+  height:6px;
+  border-radius:6px;
+  background:#3a3542;
+}
+#seek::-moz-range-thumb{
+  width:16px;
+  height:16px;
+  border:0;
+  border-radius:50%;
+  background:var(--pink);
+  cursor:grab;
+}
+.track-cover img,.player-art img{background:#17171e}

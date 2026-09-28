@@ -15,3 +15,24 @@ Output directory: `/`
 
 ## GitHub Pages
 Можно использовать workflow из `.github/workflows/update-and-deploy.yml`.
+
+
+## Обложки песен
+
+Обложка сайта находится в `assets/cover.png`.
+
+Для отдельной обложки песни положите изображение в `assets/` с тем же именем, что и MP3:
+- `music/Dvorets.mp3` → `assets/Dvorets.jpg`
+- `music/Rekursiya mirov.mp3` → `assets/Rekursiya mirov.jpg`
+
+Поддерживаются PNG, JPG/JPEG и WEBP. Если отдельной обложки нет, используется `assets/cover.png`.
+
+## Русские названия
+
+Для текущих треков генератор автоматически показывает:
+- Dvorets → Дворец
+- Rekursiya mirov → Рекурсия миров
+- Simulyacia → Симуляция
+- Vo sne ya... → Во сне я...
+
+Перемотка выполняется ползунком в нижнем плеере: мышью на компьютере или пальцем на телефоне.
