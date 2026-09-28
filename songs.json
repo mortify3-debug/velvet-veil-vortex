@@ -1,5 +1,10 @@
 [
   {
+    "title": "Rekursiya mirov",
+    "src": "./music/Rekursiya%20mirov.mp3",
+    "cover": "./assets/cover.png"
+  },
+  {
     "title": "Simulyacia",
     "src": "./music/Simulyacia.mp3",
     "cover": "./assets/cover.png"
