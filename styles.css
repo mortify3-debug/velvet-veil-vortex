@@ -421,27 +421,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .album h4 { font-size: 0.9rem; margin: 0.6rem 0 0.1rem; padding: 0 0.4rem; }
 .album span { display: block; font-size: 0.78rem; color: var(--muted); padding-bottom: 0.7rem; }
 
-/* ========== TOUR ========== */
-.shows { display: flex; flex-direction: column; gap: 0.7rem; }
-.show {
-  display: grid;
-  grid-template-columns: 85px 1fr auto;
-  align-items: center;
-  gap: 1rem;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 0.95rem 1.15rem;
-  transition: 0.2s;
-}
-.show:active { border-color: var(--pink); }
-.d { text-align: center; }
-.d b { display: block; font-size: 1.4rem; color: var(--pink); line-height: 1; }
-.d span { font-size: 0.72rem; color: var(--muted); letter-spacing: 0.04em; }
-.p b { display: block; font-size: 1rem; }
-.p span { font-size: 0.85rem; color: var(--muted); }
-.note { text-align: center; margin-top: 1.4rem; color: var(--muted); font-size: 0.95rem; }
-.note a { color: var(--cyan); }
+
 
 /* ========== VIDEO ========== */
 .vids {
@@ -678,37 +658,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
     gap: 0.75rem;
   }
 
-  /* Tour */
-  .show {
-    grid-template-columns: 60px 1fr;
-    padding: 0.85rem 1rem;
-  }
-  .d b { font-size: 1.25rem; }
-  .p b { font-size: 0.95rem; }
 
-  /* About */
-  .about { font-size: 0.98rem; margin-bottom: 1.75rem; }
-  .members {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 0.85rem;
-  }
-
-  /* Merch */
-  .merch {
-    grid-template-columns: 1fr;
-    max-width: 320px;
-    margin: 0 auto;
-  }
-
-  /* Contact */
-  .contacts {
-    grid-template-columns: 1fr;
-    gap: 1.25rem;
-  }
-  .contacts a { font-size: 0.9rem; }
-  .socials { gap: 0.5rem 1rem; }
-  .socials a { font-size: 0.9rem; }
-}
 
 /* ========================================
    RESPONSIVE — SMALL PHONES
