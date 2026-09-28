@@ -1,36 +1,46 @@
 <!doctype html>
 <html lang="ru">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#05070d">
-<title>Velvet Veil Vortex</title>
-<meta name="description" content="Velvet Veil Vortex — official music site.">
-<link rel="preload" as="image" href="./assets/cover.png">
-<link rel="stylesheet" href="./style.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#07070a">
+  <title>Velvet Veil Vortex — Music</title>
+  <link rel="stylesheet" href="./style.css">
 </head>
 <body>
-<header class="topbar"><a class="nav active" href="#home">HOME</a><a class="nav" href="#music">MUSIC</a></header>
+<header class="topbar">
+  <a class="brand" href="#home" aria-label="Velvet Veil Vortex">VELVET VEIL VORTEX</a>
+  <nav><a href="#home">HOME</a><a href="#music">MUSIC</a></nav>
+</header>
 <main>
-<section id="home" class="hero" aria-label="Velvet Veil Vortex">
-<img class="hero-cover" src="./assets/cover.png" alt="Velvet Veil Vortex">
-<div class="hero-shade"></div>
+<section id="home" class="hero">
+  <img class="hero-cover" src="./assets/cover.png" alt="Velvet Veil Vortex">
+  <div class="hero-shade"></div>
+  <div class="hero-content">
+    <div class="eyebrow">ROCK / CYBERPUNK / NIGHT CITY</div>
+    <h1>VELVET VEIL<br><span>VORTEX</span></h1>
+    <p>LOUDER THAN YOUR FEARS</p>
+    <a class="hero-play" href="#music">PLAY MUSIC <span>▶</span></a>
+  </div>
 </section>
 <section id="music" class="music-section">
-<div class="section-title"><div><span>VELVET VEIL VORTEX</span><h1>MUSIC</h1></div><p>MP3 из папки <b>music/</b> появляются автоматически после публикации.</p></div>
-<div id="trackList" class="tracks"></div>
-<div id="emptyState" class="empty">Пока нет MP3. Добавьте песни в папку <code>music/</code> и сделайте push.</div>
+  <div class="section-head"><div><div class="eyebrow">LATEST TRACKS</div><h2>MUSIC</h2></div><span id="track-count" class="count"></span></div>
+  <div id="track-list" class="track-list" aria-live="polite"></div>
+  <div id="empty" class="empty" hidden>Добавь MP3 в папку <b>music/</b> и сделай Commit в GitHub.</div>
 </section>
 </main>
-<div class="player">
-<div class="player-top">
-<div class="now"><img src="./assets/cover.png" alt=""><div><strong id="nowTitle">Выберите трек</strong><small>Velvet Veil Vortex</small></div></div>
-<div class="buttons"><button id="prev" title="Предыдущий">⏮</button><button id="play" class="main" title="Play">▶</button><button id="next" title="Следующий">⏭</button></div>
-<a id="download" class="download" href="#" download title="Скачать MP3">⇩</a>
+<div class="player" id="player">
+  <div class="player-art"><img id="player-cover" src="./assets/cover.png" alt=""></div>
+  <div class="player-main">
+    <div class="player-title" id="player-title">Выберите песню</div>
+    <div class="progress-row"><span id="current-time">0:00</span><input id="seek" type="range" min="0" max="100" value="0"><span id="duration">0:00</span></div>
+  </div>
+  <div class="player-controls">
+    <button id="prev" aria-label="Предыдущая">⏮</button><button id="play" class="play-btn" aria-label="Play">▶</button><button id="next" aria-label="Следующая">⏭</button>
+  </div>
+  <a id="player-download" class="download" href="#" download hidden>⇩</a>
+  <audio id="audio" preload="metadata"></audio>
 </div>
-<div class="timeline"><span id="cur">0:00</span><input id="seek" type="range" min="0" max="100" value="0"><span id="dur">0:00</span></div>
-<div class="bottom-controls"><span>🔊</span><input id="volume" type="range" min="0" max="1" step="0.01" value="0.8"></div>
-</div>
-<audio id="audio" preload="metadata"></audio>
 <script src="./app.js"></script>
-</body></html>
+</body>
+</html>
