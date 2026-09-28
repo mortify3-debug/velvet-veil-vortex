@@ -1,68 +1,36 @@
 <!doctype html>
 <html lang="ru">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Velvet Veil Vortex — Official</title>
-  <meta name="description" content="Velvet Veil Vortex — official music site.">
-  <link rel="stylesheet" href="style.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#05070d">
+<title>Velvet Veil Vortex</title>
+<meta name="description" content="Velvet Veil Vortex — official music site.">
+<link rel="preload" as="image" href="./assets/cover.png">
+<link rel="stylesheet" href="./style.css">
 </head>
 <body>
-  <header class="topbar">
-    <a class="nav-link active" href="#home">HOME</a>
-    <a class="nav-link" href="#music">MUSIC</a>
-  </header>
-
-  <main>
-    <section id="home" class="hero">
-      <div class="hero-overlay"></div>
-      <div class="brand-copy">
-        <div class="band-name"><span>VELVET VEIL</span><b>VORTEX</b></div>
-        <div class="tagline">LOUDER THAN YOUR FEARS</div>
-      </div>
-    </section>
-
-    <section id="music" class="music-section">
-      <div class="section-head">
-        <div>
-          <span class="eyebrow">VELVET VEIL VORTEX</span>
-          <h1>Music</h1>
-        </div>
-        <div class="hint">Новые MP3 появляются автоматически после публикации.</div>
-      </div>
-      <div id="trackList" class="track-list"></div>
-      <div id="emptyState" class="empty-state" hidden>В папке <code>music/</code> пока нет MP3.</div>
-    </section>
-  </main>
-
-  <div class="player" id="player">
-    <div class="player-inner">
-      <div class="now-playing">
-        <div class="cover-mini"></div>
-        <div class="track-meta">
-          <strong id="nowTitle">Выберите трек</strong>
-          <span>Velvet Veil Vortex</span>
-        </div>
-      </div>
-      <div class="controls">
-        <button id="prevBtn" class="control" aria-label="Предыдущий трек">⏮</button>
-        <button id="playBtn" class="play" aria-label="Воспроизвести">▶</button>
-        <button id="nextBtn" class="control" aria-label="Следующий трек">⏭</button>
-      </div>
-      <div class="timeline">
-        <span id="currentTime">0:00</span>
-        <input id="progress" type="range" min="0" max="100" value="0" aria-label="Прогресс">
-        <span id="duration">0:00</span>
-      </div>
-      <div class="volume">
-        <span>🔊</span>
-        <input id="volume" type="range" min="0" max="1" step="0.01" value="0.8" aria-label="Громкость">
-        <a id="downloadCurrent" class="download-current" href="#" download aria-label="Скачать текущий MP3" title="Скачать MP3">⇩</a>
-      </div>
-    </div>
-  </div>
-
-  <audio id="audio" preload="metadata"></audio>
-  <script src="app.js"></script>
-</body>
-</html>
+<header class="topbar"><a class="nav active" href="#home">HOME</a><a class="nav" href="#music">MUSIC</a></header>
+<main>
+<section id="home" class="hero" aria-label="Velvet Veil Vortex">
+<img class="hero-cover" src="./assets/cover.png" alt="Velvet Veil Vortex">
+<div class="hero-shade"></div>
+</section>
+<section id="music" class="music-section">
+<div class="section-title"><div><span>VELVET VEIL VORTEX</span><h1>MUSIC</h1></div><p>MP3 из папки <b>music/</b> появляются автоматически после публикации.</p></div>
+<div id="trackList" class="tracks"></div>
+<div id="emptyState" class="empty">Пока нет MP3. Добавьте песни в папку <code>music/</code> и сделайте push.</div>
+</section>
+</main>
+<div class="player">
+<div class="player-top">
+<div class="now"><img src="./assets/cover.png" alt=""><div><strong id="nowTitle">Выберите трек</strong><small>Velvet Veil Vortex</small></div></div>
+<div class="buttons"><button id="prev" title="Предыдущий">⏮</button><button id="play" class="main" title="Play">▶</button><button id="next" title="Следующий">⏭</button></div>
+<a id="download" class="download" href="#" download title="Скачать MP3">⇩</a>
+</div>
+<div class="timeline"><span id="cur">0:00</span><input id="seek" type="range" min="0" max="100" value="0"><span id="dur">0:00</span></div>
+<div class="bottom-controls"><span>🔊</span><input id="volume" type="range" min="0" max="1" step="0.01" value="0.8"></div>
+</div>
+<audio id="audio" preload="metadata"></audio>
+<script src="./app.js"></script>
+</body></html>

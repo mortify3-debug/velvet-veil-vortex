@@ -1,53 +1,51 @@
-# Velvet Veil Vortex — GitHub + Cloudflare
+# Velvet Veil Vortex — GitHub Pages + Cloudflare Pages
 
-Статическая версия сайта. Она работает без PHP и базы данных, поэтому подходит для GitHub Pages и Cloudflare Pages.
+Эта версия исправлена так, чтобы обложка была обычным `<img>` и гарантированно попадала в сборку. Сайт статический, без PHP.
 
-## Как добавлять MP3
+## 1. Загрузка в GitHub
+Загрузите **всё содержимое** архива в корень репозитория, а не сам ZIP-файл.
 
-1. Положите MP3-файл в папку `music/`.
-2. Название файла будет названием песни. Например:
-   `Neon Blood.mp3`
-3. Сделайте commit и push в ветку `main`.
-4. GitHub Actions автоматически соберёт сайт, а Cloudflare Pages при подключённом GitHub автоматически сделает новый deploy.
+Структура должна быть:
 
-Песни сортируются по имени файла. Чтобы новый трек оказался первым, используйте, например:
-`03 - Neon Blood.mp3`, `02 - Another Song.mp3`, `01 - First Song.mp3`.
+```
+index.html
+style.css
+app.js
+assets/cover.png
+music/
+scripts/build.mjs
+.github/workflows/pages.yml
+```
 
-## GitHub Pages
+## 2. Добавление MP3
+Положите песни непосредственно в `music/`, например:
 
-В репозитории откройте Settings → Pages и выберите публикацию через GitHub Actions. Workflow `.github/workflows/pages.yml` уже подготовлен.
+```
+music/01 - Neon Blood.mp3
+music/02 - New Song.mp3
+```
 
-## Cloudflare Pages
+После push GitHub Actions создаст `dist/songs.json`, скопирует MP3 и обложку в `dist/` и опубликует сайт.
 
-Workers & Pages → Create application → Pages → Connect to Git → GitHub → выберите репозиторий.
+## 3. GitHub Pages
+GitHub → Settings → Pages → Source: **GitHub Actions**.
 
-Настройки:
+После push откройте Actions. В успешном запуске шаг `Verify site files` должен показать `dist/songs.json`, `dist/assets/cover.png` и найденные MP3.
+
+## 4. Cloudflare Pages
+Cloudflare → Workers & Pages → Create → Pages → Import existing Git repository.
+
 - Production branch: `main`
 - Build command: `node scripts/build.mjs`
 - Build output directory: `dist`
 
-После этого каждый push в `main` будет автоматически публиковаться.
+Cloudflare автоматически делает новый deployment после каждого push.
 
-## Ограничения MP3
+## 5. Скачивание
+У каждой песни есть кнопка `⇩`. Она скачивает MP3. Такая же кнопка находится в плеере для текущей песни.
 
-Cloudflare Pages ограничивает размер одного статического файла 25 MiB. GitHub позволяет загрузить через браузер файл до 25 MiB, а через Git — до 100 MiB; но файл больше 25 MiB всё равно не сможет стать обычным статическим asset Cloudflare Pages. Для больших треков лучше использовать Cloudflare R2.
+## Если обложка не показывается
+Убедитесь, что в GitHub действительно существует файл:
+`assets/cover.png`
 
-## Важно
-
-Этот сайт специально не содержит веб-форму загрузки MP3: на GitHub/Cloudflare Pages статический сайт не может безопасно записывать файлы обратно в GitHub без авторизации. Добавление трека делается через GitHub — это безопаснее и автоматически запускает публикацию.
-
-## Скачивание MP3
-
-У каждого трека есть кнопка **⇩** для скачивания MP3. Она работает прямо из списка Music. В нижнем плеере такая же кнопка скачивает текущую песню.
-
-На GitHub Pages и Cloudflare Pages MP3 находятся на том же домене, поэтому браузер обычно может скачать файл через атрибут `download`. Если браузер открывает MP3 вместо скачивания, можно использовать контекстное меню ссылки и выбрать сохранение файла.
-
-## Мобильная версия
-
-Сайт адаптирован для телефонов: навигация, список треков и нижний плеер перестраиваются под узкий экран. Управление плеером остаётся доступным без горизонтальной прокрутки.
-
-## Где искать `songs.json`
-
-` songs.json` генерируется во время сборки в папке `dist/songs.json`, а не сохраняется в корень GitHub-репозитория. Это ожидаемое поведение: папка `dist` — готовая версия сайта, которую публикует GitHub Pages или Cloudflare Pages. В GitHub Actions откройте запуск workflow → шаг **Verify generated songs.json**: он покажет созданный файл и список найденных MP3.
-
-Если список пустой, проверьте, что MP3 действительно закоммичены в папку `music/` в репозитории (не вложены в дополнительную папку). Для Cloudflare Pages должны быть указаны **Build command** `node scripts/build.mjs` и **Build output directory** `dist`. GitHub Actions workflow из этого архива публикует именно GitHub Pages; Cloudflare Pages выполняет собственную сборку при подключённом репозитории.
+Важно: загружайте содержимое архива в репозиторий. Не нужно загружать ZIP как единственный файл.
