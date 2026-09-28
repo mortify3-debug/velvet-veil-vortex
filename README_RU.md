@@ -1,51 +1,62 @@
-# Velvet Veil Vortex — GitHub Pages + Cloudflare Pages
+# Velvet Veil Vortex — GitHub + Cloudflare Pages
 
-Эта версия исправлена так, чтобы обложка была обычным `<img>` и гарантированно попадала в сборку. Сайт статический, без PHP.
+## Главное
+Эта версия **не использует `dist/` и не требует build-команды в Cloudflare**. Все файлы сайта находятся прямо в корне репозитория. GitHub Actions создаёт `songs.json` из файлов в папке `music/`.
 
-## 1. Загрузка в GitHub
-Загрузите **всё содержимое** архива в корень репозитория, а не сам ZIP-файл.
+Структура:
 
-Структура должна быть:
-
-```
+```text
 index.html
 style.css
 app.js
+songs.json
+generate-songs.mjs
 assets/cover.png
 music/
-scripts/build.mjs
-.github/workflows/pages.yml
+.github/workflows/update-and-deploy.yml
+_headers
 ```
 
-## 2. Добавление MP3
-Положите песни непосредственно в `music/`, например:
+## Добавление MP3
+Загружайте MP3 в папку `music/` в GitHub и делайте Commit.
 
-```
+Пример:
+
+```text
 music/01 - Neon Blood.mp3
-music/02 - New Song.mp3
+music/02 - Cyber Dreams.mp3
 ```
 
-После push GitHub Actions создаст `dist/songs.json`, скопирует MP3 и обложку в `dist/` и опубликует сайт.
+После push GitHub Actions:
+1. запускает `generate-songs.mjs`;
+2. обновляет `songs.json`;
+3. публикует сайт GitHub Pages.
 
-## 3. GitHub Pages
-GitHub → Settings → Pages → Source: **GitHub Actions**.
+Cloudflare Pages при подключении этого репозитория также автоматически создаёт новый deployment после push.
 
-После push откройте Actions. В успешном запуске шаг `Verify site files` должен показать `dist/songs.json`, `dist/assets/cover.png` и найденные MP3.
-
-## 4. Cloudflare Pages
-Cloudflare → Workers & Pages → Create → Pages → Import existing Git repository.
+## Cloudflare Pages — важные настройки
+Для этого варианта **не нужен Node build**.
 
 - Production branch: `main`
-- Build command: `node scripts/build.mjs`
-- Build output directory: `dist`
+- Build command: оставить пустым
+- Build output directory: `/` или корень проекта
 
-Cloudflare автоматически делает новый deployment после каждого push.
+Cloudflare Pages поддерживает статические HTML-сайты без framework/build. См. официальную документацию Cloudflare.
 
-## 5. Скачивание
-У каждой песни есть кнопка `⇩`. Она скачивает MP3. Такая же кнопка находится в плеере для текущей песни.
+## GitHub Pages
+GitHub → Settings → Pages → Source: **GitHub Actions**.
 
-## Если обложка не показывается
-Убедитесь, что в GitHub действительно существует файл:
-`assets/cover.png`
+## Обложка
+Файл должен находиться строго здесь:
 
-Важно: загружайте содержимое архива в репозиторий. Не нужно загружать ZIP как единственный файл.
+```text
+assets/cover.png
+```
+
+Сайт подключает его напрямую как `<img>`, поэтому он не зависит от CSS-фона.
+
+## Скачивание
+У каждой песни есть кнопка `⇩`. Нижняя кнопка скачивает текущую песню.
+
+## Важно про MP3
+Размер и лимиты зависят от платформы. Если отдельные MP3 становятся слишком большими для размещения непосредственно на Pages/GitHub, лучше вынести аудиофайлы в Cloudflare R2.
