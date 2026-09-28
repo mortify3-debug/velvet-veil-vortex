@@ -1,5 +1,10 @@
 [
   {
+    "title": "Dvorets",
+    "src": "./music/Dvorets.mp3",
+    "cover": "./assets/cover.png"
+  },
+  {
     "title": "Rekursiya mirov",
     "src": "./music/Rekursiya%20mirov.mp3",
     "cover": "./assets/cover.png"
