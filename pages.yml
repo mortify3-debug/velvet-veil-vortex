@@ -26,6 +26,13 @@ jobs:
           node-version: 22
       - name: Build site
         run: node scripts/build.mjs
+      - name: Verify generated songs.json
+        run: |
+          test -f dist/songs.json
+          echo 'Generated dist/songs.json:'
+          cat dist/songs.json
+          echo 'MP3 files included:'
+          find dist/music -maxdepth 1 -type f -iname '*.mp3' -printf '%f\n'
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload artifact
