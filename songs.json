@@ -8,13 +8,11 @@
     "title": "Рекурсия миров",
     "src": "./music/Rekursiya%20mirov.mp3",
     "cover": "./assets/cover.png"
-    "duration": 223.817143
   },
   {
     "title": "Симуляция",
     "src": "./music/Simulyacia.mp3",
     "cover": "./assets/cover.png"
-    "duration": 270.18449
   },
   {
     "title": "Во сне я...",
@@ -25,6 +23,5 @@
     "title": "Лифт летит",
     "src": "./music/%D0%9B%D0%B8%D1%84%D1%82%20%D0%BB%D0%B5%D1%82%D0%B8%D1%82.mp3",
     "cover": "./assets/cover.png"
-    "duration": 277.681633
   }
 ]
