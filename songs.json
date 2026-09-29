@@ -2,26 +2,26 @@
   {
     "title": "Дворец",
     "src": "./music/Dvorets.mp3",
-    "cover": "./assets/cover.png"
+     "cover": "./assets/covers/dvorets.jpg"
   },
   {
     "title": "Рекурсия миров",
     "src": "./music/Rekursiya%20mirov.mp3",
-    "cover": "./assets/cover.png"
+      "cover": "./assets/covers/dvorets.jpg"
   },
   {
     "title": "Симуляция",
     "src": "./music/Simulyacia.mp3",
-    "cover": "./assets/cover.png"
+       "cover": "./assets/covers/dvorets.jpg"
   },
   {
     "title": "Во сне я...",
     "src": "./music/Vo%20sne%20ya...mp3",
-    "cover": "./assets/cover.png"
+       "cover": "./assets/covers/dvorets.jpg"
   },
   {
     "title": "Лифт летит",
     "src": "./music/%D0%9B%D0%B8%D1%84%D1%82%20%D0%BB%D0%B5%D1%82%D0%B8%D1%82.mp3",
-    "cover": "./assets/cover.png"
+       "cover": "./assets/covers/dvorets.jpg"
   }
 ]
