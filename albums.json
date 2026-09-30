@@ -5,16 +5,7 @@
     "cover": "./assets/covers/cyberpunk.jpg",
     "year": "",
     "folder": "Киберпанк",
-    "tracks": [
-      {
-        "title": "Дворец",
-        "src": "./music/%D0%9A%D0%B8%D0%B1%D0%B5%D1%80%D0%BF%D0%B0%D0%BD%D0%BA/Dvorets.mp3"
-      },
-      {
-        "title": "Лифт летит",
-        "src": "./music/%D0%9A%D0%B8%D0%B1%D0%B5%D1%80%D0%BF%D0%B0%D0%BD%D0%BA/Lift%20letit.mp3"
-      }
-    ]
+    "tracks": []
   },
   {
     "id": "город-света",
@@ -22,16 +13,7 @@
     "cover": "./assets/covers/gorodsveta.jpg",
     "year": "",
     "folder": "Город света",
-    "tracks": [
-      {
-        "title": "Симуляция",
-        "src": "./music/%D0%93%D0%BE%D1%80%D0%BE%D0%B4%20%D1%81%D0%B2%D0%B5%D1%82%D0%B0/Simulyacia.mp3"
-      },
-      {
-        "title": "Во сне я...",
-        "src": "./music/%D0%93%D0%BE%D1%80%D0%BE%D0%B4%20%D1%81%D0%B2%D0%B5%D1%82%D0%B0/Vo%20sne%20ya...mp3"
-      }
-    ]
+    "tracks": []
   },
   {
     "id": "рекурсия-миров",
@@ -39,11 +21,6 @@
     "cover": "./assets/covers/rekursia-mirov.jpg",
     "year": "",
     "folder": "Рекурсия миров",
-    "tracks": [
-      {
-        "title": "Рекурсия миров",
-        "src": "./music/%D0%A0%D0%B5%D0%BA%D1%83%D1%80%D1%81%D0%B8%D1%8F%20%D0%BC%D0%B8%D1%80%D0%BE%D0%B2/Rekursiya%20mirov.mp3"
-      }
-    ]
+    "tracks": []
   }
 ]

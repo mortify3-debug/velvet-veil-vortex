@@ -1,13 +1,12 @@
 /**
- * Сканирует music/<Альбом>/*.mp3 и собирает albums.json
+ * Сканирует music/<Альбом>/ и пишет albums.json
+ * Альбомы показываются даже без MP3 (с обложкой).
  *
- * Как добавить трек:
- *   1. Создайте папку music/НазваниеАльбома (если ещё нет)
- *   2. Положите туда MP3
- *   3. Обложку положите в assets/covers/ (имя файла ≈ имя папки)
- *   4. Запустите: node generate-songs.mjs
+ * Добавить трек: положить MP3 в music/Киберпанк/ и
+ *   node generate-songs.mjs
+ * или просто push — CI сделает это сам.
  */
-import { readdir, writeFile, mkdir, access } from 'node:fs/promises';
+import { readdir, writeFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 
 const musicDir = './music';
@@ -20,18 +19,18 @@ const audioExt = /\.(mp3|m4a|ogg|wav)$/i;
 const imageExt = /\.(png|jpe?g|webp)$/i;
 
 const russianTitles = {
-  'dvorets': 'Дворец',
+  dvorets: 'Дворец',
   'lift letit': 'Лифт летит',
-  'simulyacia': 'Симуляция',
+  simulyacia: 'Симуляция',
   'vo sne ya': 'Во сне я...',
   'vo sne ya..': 'Во сне я...',
   'rekursiya mirov': 'Рекурсия миров'
 };
 
+const order = ['Киберпанк', 'Город света', 'Рекурсия миров'];
+
 const cleanBase = name =>
-  name.replace(/\.[^.]+$/, '')
-      .replace(/^\s*\d+\s*[-_.]\s*/, '')
-      .trim();
+  name.replace(/\.[^.]+$/, '').replace(/^\s*\d+\s*[-_.]\s*/, '').trim();
 
 const makeTitle = name => {
   const base = cleanBase(name);
@@ -39,46 +38,46 @@ const makeTitle = name => {
 };
 
 const encodePath = (...parts) =>
-  parts.map(p => encodeURIComponent(p).replace(/%2F/g, '/')).join('/');
+  parts.map(p => encodeURIComponent(p)).join('/');
 
-// covers by lowercase base name
 const coverFiles = (await readdir(coversDir, { withFileTypes: true }))
   .filter(x => x.isFile() && imageExt.test(x.name))
   .map(x => x.name);
 
 const coverByKey = new Map();
 for (const name of coverFiles) {
-  const key = name.replace(/\.[^.]+$/, '').toLowerCase().replace(/[\s_]+/g, '-');
-  coverByKey.set(key, name);
-  coverByKey.set(name.replace(/\.[^.]+$/, '').toLowerCase(), name);
+  const base = name.replace(/\.[^.]+$/, '').toLowerCase();
+  coverByKey.set(base, name);
+  coverByKey.set(base.replace(/[\s_]+/g, '-'), name);
+  coverByKey.set(base.replace(/[\s_-]+/g, ''), name);
 }
 
+const aliases = {
+  киберпанк: ['cyberpunk'],
+  'город света': ['gorodsveta', 'gorod-sveta', 'gorod sveta'],
+  'рекурсия миров': ['rekursia-mirov', 'rekursiya-mirov', 'rekursiya mirov', 'rekursia mirov']
+};
+
 function findCover(folderName) {
+  const lower = folderName.toLowerCase();
   const keys = [
-    folderName.toLowerCase().replace(/[\s_]+/g, '-'),
-    folderName.toLowerCase(),
-    folderName.toLowerCase().replace(/\s+/g, '')
+    lower,
+    lower.replace(/[\s_]+/g, '-'),
+    lower.replace(/[\s_-]+/g, ''),
+    ...(aliases[lower] || [])
   ];
-  // aliases
-  const aliases = {
-    'киберпанк': ['cyberpunk'],
-    'город света': ['gorodsveta', 'gorod-sveta'],
-    'рекурсия миров': ['rekursia-mirov', 'rekursiya mirov', 'rekursiya-mirov']
-  };
-  const extra = aliases[folderName.toLowerCase()] || [];
-  for (const k of [...keys, ...extra]) {
-    if (coverByKey.has(k)) return `./assets/covers/${encodeURIComponent(coverByKey.get(k)).replace(/%2F/g, '/')}`;
+  for (const k of keys) {
+    if (coverByKey.has(k)) {
+      const file = coverByKey.get(k);
+      return `./assets/covers/${encodeURIComponent(file)}`;
+    }
   }
   return './assets/cover2.png';
 }
 
 const entries = await readdir(musicDir, { withFileTypes: true });
-const albumDirs = entries.filter(x => x.isDirectory()).sort((a, b) =>
-  a.name.localeCompare(b.name, 'ru')
-);
+let albumDirs = entries.filter(x => x.isDirectory());
 
-// Preferred order
-const order = ['Киберпанк', 'Город света', 'Рекурсия миров'];
 albumDirs.sort((a, b) => {
   const ia = order.indexOf(a.name);
   const ib = order.indexOf(b.name);
@@ -97,8 +96,6 @@ for (const dir of albumDirs) {
     .map(x => x.name)
     .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
 
-  if (!files.length) continue;
-
   albums.push({
     id: folder.toLowerCase().replace(/\s+/g, '-'),
     title: folder,
@@ -114,7 +111,6 @@ for (const dir of albumDirs) {
 
 await writeFile('./albums.json', JSON.stringify(albums, null, 2) + '\n');
 
-// Flat list for compatibility
 const flat = albums.flatMap(a =>
   a.tracks.map(t => ({
     title: t.title,
@@ -125,9 +121,7 @@ const flat = albums.flatMap(a =>
 );
 await writeFile('./songs.json', JSON.stringify(flat, null, 2) + '\n');
 
-console.log(`Generated albums.json with ${albums.length} album(s):`);
+console.log(`albums.json: ${albums.length} album(s)`);
 for (const a of albums) {
-  console.log(`  - ${a.title}: ${a.tracks.length} track(s)`);
+  console.log(`  - ${a.title}: ${a.tracks.length} track(s), cover=${a.cover}`);
 }
-console.log(`songs.json: ${flat.length} track(s)`);
-

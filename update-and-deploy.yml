@@ -18,47 +18,25 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 22
-
       - name: Generate albums from music/ folders
         run: node generate-songs.mjs
-
-      - name: Verify catalog
-        run: |
-          test -f albums.json
-          echo '--- albums.json ---'
-          cat albums.json
-          echo '--- MP3 tree ---'
-          find music -type f \( -iname '*.mp3' -o -iname '*.m4a' -o -iname '*.ogg' -o -iname '*.wav' \) | sort
-
-      - name: Commit generated albums.json
+      - name: Commit catalog
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add albums.json songs.json || true
-          if git diff --cached --quiet; then
-            echo "No catalog changes"
-          else
+          git add albums.json songs.json
+          if git diff --cached --quiet; then echo "No changes"; else
             git commit -m "chore: update music catalog [skip ci]"
-            git push
+            git push || true
           fi
-
-      - name: Configure Pages
-        uses: actions/configure-pages@v5
-
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
         with:
           path: .
-
   deploy:
     needs: build
     runs-on: ubuntu-latest
@@ -66,6 +44,5 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
+      - id: deployment
         uses: actions/deploy-pages@v4
