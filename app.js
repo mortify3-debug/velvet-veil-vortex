@@ -73,6 +73,11 @@ function setVolUI(percent) {
   if (volFill) volFill.style.width = p + '%';
   if (volBar) volBar.setAttribute('aria-valuenow', String(Math.round(p)));
   audio.volume = p / 100;
+  document.querySelectorAll('.track-vol-bar').forEach(bar => {
+    const fill = bar.querySelector('.vol-fill');
+    if (fill) fill.style.width = p + '%';
+    bar.setAttribute('aria-valuenow', String(Math.round(p)));
+  });
 }
 
 function percentFromEvent(el, e) {
@@ -226,14 +231,24 @@ function renderTracks() {
     row.className = 'track' + (sameTrack(i) && !audio.paused ? ' active' : '');
     row.dataset.index = i;
 
+    const volPct = Math.round((audio.volume || 0.9) * 100);
+
     row.innerHTML = `
-      <div class="track-no">${String(i + 1).padStart(2, '0')}</div>
+      <div class="track-play-wrap">
+        <button type="button" class="card-play" data-track-index="${i}" aria-label="Воспроизвести">▶</button>
+        <div class="track-no">${String(i + 1).padStart(2, '0')}</div>
+      </div>
       <div class="track-info">
         <h3>${esc(t.title)}</h3>
         <span class="track-duration" data-duration="${i}">—:—</span>
       </div>
       <div class="track-actions">
-        <button type="button" class="card-play" data-track-index="${i}">▶</button>
+        <div class="track-vol" data-vol-row="${i}">
+          <span class="vol-icon" aria-hidden="true">🔊</span>
+          <div class="vol-bar track-vol-bar" role="slider" aria-label="Громкость" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${volPct}" tabindex="0">
+            <div class="vol-fill" style="width:${volPct}%"></div>
+          </div>
+        </div>
         <a class="download-card" href="${esc(t.src)}" download>⇩</a>
       </div>`;
 
@@ -254,12 +269,128 @@ function renderTracks() {
       toggle();
     };
     row.onclick = e => {
-      if (e.target.closest('a')) return;
+      if (e.target.closest('a') || e.target.closest('.track-vol')) return;
       toggle();
     };
+
+    const volBarEl = row.querySelector('.track-vol-bar');
+    if (volBarEl) bindTrackVolume(volBarEl);
   });
 
   updatePlayButtons();
+}
+
+function syncAllVolumeBars() {
+  const p = Math.round((audio.volume || 0) * 100);
+  document.querySelectorAll('.track-vol-bar').forEach(bar => {
+    const fill = bar.querySelector('.vol-fill');
+    if (fill) fill.style.width = p + '%';
+    bar.setAttribute('aria-valuenow', String(p));
+  });
+  if (volFill) volFill.style.width = p + '%';
+  if (volBar) volBar.setAttribute('aria-valuenow', String(p));
+}
+
+function bindTrackVolume(bar) {
+  let dragging = false;
+  const apply = e => {
+    const p = percentFromEvent(bar, e);
+    setVolUI(p);
+    syncAllVolumeBars();
+  };
+  bar.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragging = true;
+    apply(e);
+    try { bar.setPointerCapture(e.pointerId); } catch (_) {}
+  });
+  bar.addEventListener('pointermove', e => {
+    if (!dragging) return;
+    e.preventDefault();
+    apply(e);
+  });
+  const end = e => {
+    if (!dragging) return;
+    dragging = false;
+    apply(e);
+  };
+  bar.addEventListener('pointerup', end);
+  bar.addEventListener('pointercancel', end);
+}
+
+function absoluteUrl(path) {
+  try {
+    return new URL(path, location.href).href;
+  } catch {
+    return path;
+  }
+}
+
+function updateMediaSession(t) {
+  if (!('mediaSession' in navigator) || !t) return;
+  const cover = absoluteUrl(t.cover || './assets/cover2.png');
+  try {
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: t.title || 'Velvet Veil Vortex',
+      artist: 'Velvet Veil Vortex',
+      album: t.albumTitle || 'Velvet Veil Vortex',
+      artwork: [
+        { src: cover, sizes: '512x512', type: 'image/png' },
+        { src: cover, sizes: '256x256', type: 'image/png' },
+        { src: absoluteUrl('./assets/cover.png'), sizes: '512x512', type: 'image/png' }
+      ]
+    });
+    navigator.mediaSession.playbackState = audio.paused ? 'paused' : 'playing';
+  } catch (err) {
+    console.warn('MediaSession metadata failed:', err);
+  }
+}
+
+function setupMediaSessionHandlers() {
+  if (!('mediaSession' in navigator)) return;
+  try {
+    navigator.mediaSession.setActionHandler('play', () => {
+      audio.play().catch(() => {});
+    });
+    navigator.mediaSession.setActionHandler('pause', () => {
+      audio.pause();
+    });
+    navigator.mediaSession.setActionHandler('previoustrack', () => {
+      if (!tracks.length) return;
+      if (audio.currentTime > 3) {
+        applySeek(0);
+        return;
+      }
+      load((current - 1 + tracks.length) % tracks.length, true);
+    });
+    navigator.mediaSession.setActionHandler('nexttrack', () => {
+      const n = nextIndex();
+      if (n >= 0) load(n, true);
+    });
+    navigator.mediaSession.setActionHandler('seekto', details => {
+      if (details.seekTime != null && Number.isFinite(audio.duration)) {
+        const pct = (details.seekTime / audio.duration) * 100;
+        applySeek(pct);
+      }
+    });
+    navigator.mediaSession.setActionHandler('seekbackward', details => {
+      const skip = details.seekOffset || 10;
+      if (Number.isFinite(audio.duration)) {
+        const t = Math.max(0, audio.currentTime - skip);
+        applySeek((t / audio.duration) * 100);
+      }
+    });
+    navigator.mediaSession.setActionHandler('seekforward', details => {
+      const skip = details.seekOffset || 10;
+      if (Number.isFinite(audio.duration)) {
+        const t = Math.min(audio.duration, audio.currentTime + skip);
+        applySeek((t / audio.duration) * 100);
+      }
+    });
+  } catch (err) {
+    console.warn('MediaSession handlers failed:', err);
+  }
 }
 
 function load(i, autoplay = false) {
@@ -268,6 +399,7 @@ function load(i, autoplay = false) {
   if (sameTrack(i)) {
     if (autoplay && audio.paused) audio.play().catch(err => console.warn(err));
     updatePlayButtons();
+    updateMediaSession(tracks[i]);
     return;
   }
 
@@ -278,23 +410,29 @@ function load(i, autoplay = false) {
   audio.src = t.src;
   audio.load();
 
-  titleEl.textContent = t.title;
-  playerCover.src = t.cover || './assets/cover2.png';
-  playerCover.onerror = () => {
-    playerCover.onerror = null;
-    playerCover.src = './assets/cover2.png';
-  };
+  if (titleEl) titleEl.textContent = t.title;
+  if (playerCover) {
+    playerCover.src = t.cover || './assets/cover2.png';
+    playerCover.onerror = () => {
+      playerCover.onerror = null;
+      playerCover.src = './assets/cover2.png';
+    };
+  }
 
-  playerDownload.href = t.src;
-  playerDownload.hidden = false;
+  if (playerDownload) {
+    playerDownload.href = t.src;
+    playerDownload.hidden = false;
+  }
 
   setSeekUI(0);
-  currentTimeEl.textContent = '0:00';
-  durationEl.textContent = '0:00';
+  if (currentTimeEl) currentTimeEl.textContent = '0:00';
+  if (durationEl) durationEl.textContent = '0:00';
 
   document.querySelectorAll('.track').forEach((x, n) =>
     x.classList.toggle('active', n === i)
   );
+
+  updateMediaSession(t);
 
   if (autoplay) {
     const tryPlay = () => audio.play().catch(err => console.warn(err));
@@ -492,18 +630,26 @@ repeatBtn.onclick = () => {
 };
 
 audio.addEventListener('play', () => {
-  playBtn.textContent = '❚❚';
+  if (playBtn) playBtn.textContent = '❚❚';
   updatePlayButtons();
+  if ('mediaSession' in navigator) {
+    navigator.mediaSession.playbackState = 'playing';
+  }
+  if (tracks[current]) updateMediaSession(tracks[current]);
 });
 audio.addEventListener('pause', () => {
-  playBtn.textContent = '▶';
+  if (playBtn) playBtn.textContent = '▶';
   updatePlayButtons();
+  if ('mediaSession' in navigator) {
+    navigator.mediaSession.playbackState = 'paused';
+  }
 });
 audio.addEventListener('loadedmetadata', () => {
-  durationEl.textContent = fmt(audio.duration);
+  if (durationEl) durationEl.textContent = fmt(audio.duration);
   if (!isSeeking && Number.isFinite(audio.duration) && audio.duration > 0) {
     setSeekUI((audio.currentTime / audio.duration) * 100);
   }
+  if (tracks[current]) updateMediaSession(tracks[current]);
 });
 audio.addEventListener('timeupdate', () => {
   if (isSeeking) return;
@@ -596,6 +742,8 @@ if (volBar) {
   volBar.addEventListener('pointercancel', onVolEnd);
   setVolUI(90);
 }
+
+setupMediaSessionHandlers();
 
 fetch('./albums.json?' + Date.now(), { cache: 'no-store' })
   .then(r => {

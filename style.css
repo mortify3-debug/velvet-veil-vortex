@@ -258,6 +258,14 @@ body {
   max-width: 720px;
   width: 100%;
   margin: 0 auto;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+
+.music-stage::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
+  width: 0;
+  height: 0;
 }
 
 .music-brand { margin-bottom: 18px; }
@@ -442,7 +450,7 @@ body {
 
 .track {
   display: grid;
-  grid-template-columns: 40px 1fr auto;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
   gap: 10px;
   padding: 10px 12px;
@@ -461,11 +469,18 @@ body {
   background: rgba(255, 45, 145, 0.08);
 }
 
+.track-play-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .track-no {
   font-size: 12px;
   font-weight: 800;
   color: var(--muted);
   text-align: center;
+  min-width: 22px;
 }
 
 .track-info h3 {
@@ -481,20 +496,61 @@ body {
 
 .track-actions {
   display: flex;
-  gap: 6px;
+  align-items: center;
+  gap: 8px;
 }
 
 .card-play {
   background: var(--pink);
   color: #fff;
   border: none;
-  padding: 8px 11px;
+  width: 36px;
+  height: 36px;
+  padding: 0;
   font-weight: 800;
-  font-size: 10px;
-  letter-spacing: 0.08em;
-  border-radius: 6px;
+  font-size: 12px;
+  letter-spacing: 0;
+  border-radius: 50%;
   cursor: pointer;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  box-shadow: 0 2px 10px rgba(255, 45, 145, 0.35);
   -webkit-tap-highlight-color: transparent;
+}
+
+.track-vol {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 72px;
+}
+
+.track-vol .vol-icon {
+  font-size: 12px;
+  opacity: 0.8;
+  line-height: 1;
+}
+
+.track-vol .vol-bar {
+  width: 56px;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+  position: relative;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.track-vol .vol-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 90%;
+  background: linear-gradient(90deg, var(--pink), var(--cyan));
+  border-radius: 4px;
+  pointer-events: none;
 }
 
 .download-card {
@@ -520,7 +576,7 @@ body {
 }
 
 .site-footer {
-  padding: 16px 0 140px;
+  padding: 16px 0 32px;
   text-align: center;
 }
 
@@ -537,14 +593,14 @@ body {
   color: rgba(255, 255, 255, 0.22);
 }
 
-/* ── Player ── */
+/* ── Player (hidden on site — only Media Session / lock screen) ── */
 .player {
   position: fixed;
   z-index: 40;
   left: 12px;
   right: 12px;
   bottom: 12px;
-  display: flex;
+  display: none; /* not shown on the website */
   flex-direction: column;
   gap: 10px;
   padding: 12px 16px 14px;
@@ -871,77 +927,49 @@ audio { display: none; }
   }
 
   .track {
-    grid-template-columns: 32px 1fr auto;
-    padding: 10px;
+    grid-template-columns: auto 1fr auto;
+    padding: 12px 10px;
+    gap: 12px;
   }
 
-  .player {
-    left: 8px;
-    right: 8px;
-    bottom: 8px;
-    padding: 10px 12px 12px;
-    border-radius: 14px;
-    gap: 8px;
+  /* ~30% larger play controls on mobile */
+  .card-play {
+    width: 46px;
+    height: 46px;
+    font-size: 15px;
   }
 
-  .player-top {
-    flex-wrap: wrap;
+  .track-vol {
+    min-width: 80px;
   }
 
-  .player-left {
-    flex: 1 1 auto;
-    min-width: 0;
+  .track-vol .vol-bar {
+    width: 64px;
+    height: 8px;
   }
 
-  .player-controls {
-    order: 3;
-    width: 100%;
-    justify-content: center;
-    margin-top: 2px;
+  .track-info h3 {
+    font-size: 15px;
   }
 
-  .player-right {
-    margin-left: 0;
+  .album-card-play {
+    width: 46px;
+    height: 46px;
+    font-size: 16px;
   }
 
-  .volume-row {
-    display: none;
+  .cover-hero {
+    /* ensure first cover is fully visible on mobile */
+    min-height: 100dvh;
+    height: 100dvh;
   }
 
-  .download-btn {
-    padding: 7px 10px;
-    font-size: 10px;
-  }
-
-  .player-art img {
-    width: 42px;
-    height: 42px;
-  }
-
-  .play-btn {
-    width: 44px;
-    height: 44px;
-  }
-
-  .ctrl-btn {
-    width: 32px;
-    height: 32px;
-  }
-
-  .seek-bar {
-    height: 32px;
-  }
-
-  .seek-thumb {
-    opacity: 1;
-    width: 16px;
-    height: 16px;
-    margin-left: -8px;
-    margin-top: -8px;
+  .cover-bg {
+    object-position: center center;
   }
 
   .site-footer {
-    padding: 12px 0 160px;
+    padding: 12px 0 28px;
   }
 }
 
