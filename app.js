@@ -26,6 +26,8 @@ let tracks = [];
 let current = -1;
 let shuffleOn = false;
 let repeatMode = 0; // 0 off, 1 all, 2 one
+let isSeeking = false;
+let wasPlayingBeforeSeek = false;
 
 const fmt = s =>
   !Number.isFinite(s)
@@ -166,11 +168,25 @@ function renderTracks() {
 
 function load(i, autoplay = false) {
   if (!tracks[i]) return;
+
+  // Same track: just play/pause, don't reload (preserves seek position)
+  if (i === current && audio.src && audio.src.includes(tracks[i].src.replace(/^\.\//, ''))) {
+    if (autoplay && audio.paused) {
+      audio.play().catch(err => console.warn('Playback failed:', err));
+    }
+    return;
+  }
+
   current = i;
   const t = tracks[i];
 
-  audio.src = t.src;
-  audio.load();
+  const nextSrc = t.src;
+  // Only reset src if different file
+  const abs = new URL(nextSrc, location.href).href;
+  if (audio.src !== abs) {
+    audio.src = nextSrc;
+    audio.load();
+  }
 
   titleEl.textContent = t.title;
   playerCover.src = t.cover || './assets/cover2.png';
@@ -187,7 +203,14 @@ function load(i, autoplay = false) {
   );
 
   if (autoplay) {
-    audio.play().catch(err => console.warn('Playback failed:', err));
+    const tryPlay = () => {
+      audio.play().catch(err => console.warn('Playback failed:', err));
+    };
+    if (audio.readyState >= 1) {
+      tryPlay();
+    } else {
+      audio.addEventListener('loadedmetadata', tryPlay, { once: true });
+    }
   }
 }
 
@@ -215,7 +238,6 @@ function setNav(which) {
   });
 }
 
-// Observe which section is in view
 if (snapMain) {
   const io = new IntersectionObserver(
     entries => {
@@ -254,7 +276,11 @@ playBtn.onclick = () => {
     }
     return;
   }
-  audio.paused ? audio.play() : audio.pause();
+  if (audio.paused) {
+    audio.play().catch(err => console.warn('Playback failed:', err));
+  } else {
+    audio.pause();
+  }
 };
 
 prevBtn.onclick = () => {
@@ -292,35 +318,109 @@ audio.addEventListener('pause', () => {
 
 audio.addEventListener('loadedmetadata', () => {
   durationEl.textContent = fmt(audio.duration);
-  seek.value = 0;
+  if (!isSeeking && audio.currentTime < 0.05) {
+    seek.value = 0;
+  } else if (Number.isFinite(audio.duration) && audio.duration > 0) {
+    seek.value = (audio.currentTime / audio.duration) * 100;
+  }
 });
 
 audio.addEventListener('timeupdate', () => {
+  if (isSeeking) return;
   currentTimeEl.textContent = fmt(audio.currentTime);
-  if (Number.isFinite(audio.duration) && audio.duration > 0 && !seek.matches(':active')) {
+  if (Number.isFinite(audio.duration) && audio.duration > 0) {
     seek.value = (audio.currentTime / audio.duration) * 100;
   }
 });
 
 audio.addEventListener('ended', () => {
-  if (repeatMode === 2) return; // loop handles it
+  if (repeatMode === 2) return;
   if (repeatMode === 1 || shuffleOn || current < tracks.length - 1) {
     const n = nextIndex();
     if (n >= 0) load(n, true);
   }
 });
 
-function seekTo(value) {
-  if (!Number.isFinite(audio.duration) || audio.duration <= 0) return;
-  const v = Math.max(0, Math.min(100, Number(value)));
-  audio.currentTime = (audio.duration * v) / 100;
+/* ── Seek (scrubbing) ── */
+function seekTo(percent) {
+  if (!Number.isFinite(audio.duration) || audio.duration <= 0) return false;
+  const v = Math.max(0, Math.min(100, Number(percent)));
+  const t = (audio.duration * v) / 100;
+  try {
+    audio.currentTime = t;
+    currentTimeEl.textContent = fmt(t);
+    seek.value = String(v);
+    return true;
+  } catch (err) {
+    console.warn('Seek failed:', err);
+    return false;
+  }
 }
 
-seek.addEventListener('input', e => seekTo(e.target.value));
-seek.addEventListener('change', e => seekTo(e.target.value));
-seek.addEventListener('pointerdown', e => seek.setPointerCapture?.(e.pointerId));
-seek.addEventListener('pointermove', e => {
-  if (e.buttons) seekTo(seek.value);
+function beginSeek(e) {
+  isSeeking = true;
+  wasPlayingBeforeSeek = !audio.paused;
+  // Don't pause — keep playing while scrubbing when possible
+  if (e && e.pointerId != null) {
+    try { seek.setPointerCapture(e.pointerId); } catch (_) {}
+  }
+}
+
+function endSeek() {
+  if (!isSeeking) return;
+  seekTo(seek.value);
+  isSeeking = false;
+  // Ensure playback continues if it was playing
+  if (wasPlayingBeforeSeek && audio.paused) {
+    audio.play().catch(() => {});
+  }
+}
+
+seek.addEventListener('pointerdown', e => {
+  beginSeek(e);
+  // Immediate seek on click position
+  seekTo(seek.value);
+});
+
+seek.addEventListener('input', e => {
+  isSeeking = true;
+  const v = Number(e.target.value);
+  // Live preview of time while dragging (don't force currentTime every frame on slow devices —
+  // but do set it so audio actually scrubs)
+  if (Number.isFinite(audio.duration) && audio.duration > 0) {
+    const t = (audio.duration * v) / 100;
+    currentTimeEl.textContent = fmt(t);
+    // Apply seek during drag for responsive scrubbing
+    if (Math.abs(audio.currentTime - t) > 0.25) {
+      try { audio.currentTime = t; } catch (_) {}
+    }
+  }
+});
+
+seek.addEventListener('change', () => {
+  seekTo(seek.value);
+  isSeeking = false;
+  if (wasPlayingBeforeSeek && audio.paused) {
+    audio.play().catch(() => {});
+  }
+});
+
+seek.addEventListener('pointerup', endSeek);
+seek.addEventListener('pointercancel', endSeek);
+seek.addEventListener('touchend', endSeek);
+seek.addEventListener('mouseup', endSeek);
+
+// Keyboard support
+seek.addEventListener('keydown', e => {
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+    isSeeking = true;
+  }
+});
+seek.addEventListener('keyup', e => {
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+    seekTo(seek.value);
+    isSeeking = false;
+  }
 });
 
 if (volume) {
