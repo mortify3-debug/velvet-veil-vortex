@@ -124,6 +124,11 @@ function applySeek(percent) {
   }
 }
 
+function setAlbumOpenMode(on) {
+  const stage = document.querySelector('.music-stage');
+  if (stage) stage.classList.toggle('album-open', !!on);
+}
+
 function renderAlbums() {
   albumGrid.innerHTML = '';
   const hasAlbums = albums.length > 0;
@@ -131,7 +136,11 @@ function renderAlbums() {
   albumGrid.hidden = false;
   trackPanel.hidden = true;
   backBtn.hidden = true;
+  const backOverlay = document.getElementById('back-btn-overlay');
+  if (backOverlay) backOverlay.hidden = true;
   musicHeading.textContent = 'АЛЬБОМЫ';
+  setAlbumOpenMode(false);
+  activeAlbumIndex = -1;
 
   if (!hasAlbums) {
     empty.hidden = false;
@@ -198,10 +207,18 @@ function openAlbum(ai, autoplayFirst = false) {
 
   albumGrid.hidden = true;
   trackPanel.hidden = false;
-  backBtn.hidden = false;
+  backBtn.hidden = true; /* overlay back on banner is enough */
+  const backOverlay = document.getElementById('back-btn-overlay');
+  if (backOverlay) backOverlay.hidden = false;
   musicHeading.textContent = album.title;
+  setAlbumOpenMode(true);
 
-  document.getElementById('album-banner-cover').src = album.cover || './assets/cover2.jpg';
+  const bannerImg = document.getElementById('album-banner-cover');
+  bannerImg.src = album.cover || './assets/cover2.jpg';
+  bannerImg.onerror = () => {
+    bannerImg.onerror = null;
+    bannerImg.src = './assets/cover2.jpg';
+  };
   document.getElementById('album-banner-title').textContent = album.title;
   document.getElementById('album-banner-year').textContent = album.year || '';
   document.getElementById('album-banner-count').textContent = tracks.length
@@ -211,9 +228,12 @@ function openAlbum(ai, autoplayFirst = false) {
   renderTracks();
   if (autoplayFirst && tracks.length) load(0, true);
 
-  /* Only reset inner list scroll — no forced page jump */
+  /* Show cover + first track at the top of the music stage */
   const stage = document.querySelector('.music-stage');
-  if (stage) stage.scrollTop = 0;
+  if (stage) {
+    stage.scrollTop = 0;
+    requestAnimationFrame(() => { stage.scrollTop = 0; });
+  }
 }
 
 function renderTracks() {
@@ -450,12 +470,15 @@ function toggleAlbumPlay(ai) {
   const albumSrcs = new Set(album.tracks.map(t => pathOf(t.src)));
   const currentIsFromAlbum = audio.src && albumSrcs.has(pathOf(audio.src));
 
+  /* Always show this album's tracks + cover on screen */
   if (!audio.paused && currentIsFromAlbum) {
     audio.pause();
+    openAlbum(ai, false);
     updatePlayButtons();
     return;
   }
   if (audio.paused && currentIsFromAlbum && audio.readyState >= 1) {
+    openAlbum(ai, false);
     audio.play().catch(() => {});
     updatePlayButtons();
     return;
@@ -584,11 +607,15 @@ listenBtn.addEventListener('click', () => {
   if (withTracks >= 0) openAlbum(withTracks, true);
 });
 
-backBtn.addEventListener('click', () => {
+function goBackToAlbums() {
   renderAlbums();
   const stage = document.querySelector('.music-stage');
   if (stage) stage.scrollTop = 0;
-});
+}
+
+if (backBtn) backBtn.addEventListener('click', goBackToAlbums);
+const backOverlayBtn = document.getElementById('back-btn-overlay');
+if (backOverlayBtn) backOverlayBtn.addEventListener('click', goBackToAlbums);
 
 playBtn.onclick = () => {
   if (current < 0) {

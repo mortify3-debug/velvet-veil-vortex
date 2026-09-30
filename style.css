@@ -439,26 +439,73 @@ body {
 
 .album-banner {
   display: flex;
-  gap: 20px;
+  flex-direction: column;
   align-items: center;
-  margin-bottom: 20px;
-  padding: 16px;
-  background: rgba(0, 0, 0, 0.3);
+  gap: 14px;
+  margin-bottom: 18px;
+  padding: 8px 8px 16px;
+  background: transparent;
   border-radius: 14px;
+  position: relative;
+  text-align: center;
 }
 
 .album-banner img {
-  width: 114px;
-  height: 114px;
+  width: min(220px, 42vw);
+  height: min(220px, 42vw);
   object-fit: cover;
-  border-radius: 10px;
+  border-radius: 14px;
   background: #17171e;
   flex-shrink: 0;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.album-banner-info {
+  width: 100%;
 }
 
 .album-banner-info h3 {
   margin: 4px 0 6px;
   font-size: clamp(22px, 3.5vw, 34px);
+}
+
+.back-btn-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 2;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  font-size: 16px;
+}
+
+/* When album is open: only cover + tracks at the top of the screen */
+.music-stage.album-open {
+  padding-top: 56px;
+}
+
+.music-stage.album-open .music-brand,
+.music-stage.album-open .section-head,
+.music-stage.album-open .site-footer {
+  display: none;
+}
+
+.music-stage.album-open .music-panel {
+  background: rgba(8, 8, 14, 0.55);
+  padding: 12px 16px 20px;
+}
+
+.track-panel {
+  animation: fadeInTracks 0.25s ease;
+}
+
+@keyframes fadeInTracks {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .eyebrow {
