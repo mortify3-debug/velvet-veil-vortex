@@ -1048,36 +1048,95 @@ audio { display: none; }
   }
 
   .site-footer {
-    padding: 12px 0 160px;
+    padding: 12px 0 28vh;
   }
 
+  /* Mobile player: larger, more square, ≤25% of screen height */
   .player {
-    width: 92%;
+    width: min(94%, 420px);
     max-width: none;
-    bottom: 8px;
-    padding: 10px 12px 12px;
-    border-radius: 14px;
-    gap: 8px;
+    max-height: 25dvh;
+    max-height: 25vh;
+    bottom: max(6px, env(safe-area-inset-bottom));
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 12px 14px 14px;
+    border-radius: 20px;
+    gap: 10px;
+    overflow: hidden;
   }
 
   .player-top {
-    flex-wrap: wrap;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .player-left {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .player-art img {
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
+  }
+
+  .player-title {
+    font-size: 15px;
+  }
+
+  .player-artist {
+    font-size: 12px;
   }
 
   .player-controls {
-    order: 3;
+    order: 0;
     width: 100%;
     justify-content: center;
-    margin-top: 2px;
+    gap: 14px;
+    margin-top: 0;
+  }
+
+  .play-btn {
+    width: 56px;
+    height: 56px;
+    font-size: 20px;
+  }
+
+  .ctrl-btn {
+    width: 40px;
+    height: 40px;
+    font-size: 16px;
+  }
+
+  .player-right {
+    display: none;
   }
 
   .volume-row {
     display: none;
   }
 
-  .player-art img {
-    width: 42px;
-    height: 42px;
+  .player-progress {
+    gap: 8px;
+  }
+
+  .player-progress span {
+    font-size: 11px;
+  }
+
+  .seek-bar {
+    height: 28px;
+  }
+
+  .seek-thumb {
+    opacity: 1;
+    width: 18px;
+    height: 18px;
+    margin-left: -9px;
+    margin-top: -9px;
   }
 
   .album-card-info h3 {
