@@ -211,8 +211,13 @@ function openAlbum(ai, autoplayFirst = false) {
   renderTracks();
   if (autoplayFirst && tracks.length) load(0, true);
 
+  /* Scroll album view to top of the screen */
+  if (musicSection) smoothGoTo(musicSection);
   const stage = document.querySelector('.music-stage');
-  if (stage) stage.scrollTop = 0;
+  if (stage) {
+    stage.scrollTop = 0;
+    requestAnimationFrame(() => { stage.scrollTop = 0; });
+  }
 }
 
 function renderTracks() {
@@ -485,11 +490,15 @@ function updatePlayButtons() {
     btn.classList.toggle('is-playing', fromThis);
   });
 
-  document.querySelectorAll('.track .card-play').forEach(btn => {
-    const i = Number(btn.dataset.trackIndex);
-    const on = playing && sameTrack(i);
-    btn.textContent = on ? '❚❚' : '▶';
-    btn.classList.toggle('is-playing', on);
+  document.querySelectorAll('.track').forEach((row, n) => {
+    const isCurrent = sameTrack(n);
+    row.classList.toggle('active', isCurrent);
+    row.classList.toggle('is-playing', isCurrent && playing);
+    const btn = row.querySelector('.card-play');
+    if (btn) {
+      btn.textContent = isCurrent && playing ? '❚❚' : '▶';
+      btn.classList.toggle('is-playing', isCurrent && playing);
+    }
   });
 }
 

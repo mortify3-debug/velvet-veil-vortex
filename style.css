@@ -280,7 +280,7 @@ body {
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
   padding: 64px 4vw 20px;
-  max-width: 720px;
+  max-width: 936px; /* ~30% wider than 720 for desktop lists */
   width: 100%;
   margin: 0 auto;
   scrollbar-width: none; /* Firefox */
@@ -352,21 +352,21 @@ body {
   color: var(--pink);
 }
 
-/* Albums — single column */
+/* Albums — single column (~30% larger on desktop) */
 .album-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 14px;
+  gap: 18px;
 }
 
 .album-card {
   cursor: pointer;
   display: grid;
-  grid-template-columns: 88px 1fr;
+  grid-template-columns: 114px 1fr;
   gap: 0;
   background: rgba(16, 16, 24, 0.6);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
+  border-radius: 14px;
   overflow: hidden;
   transition: border-color 0.2s, box-shadow 0.25s, transform 0.2s;
   -webkit-tap-highlight-color: transparent;
@@ -382,8 +382,8 @@ body {
 
 .album-card-cover {
   position: relative;
-  width: 88px;
-  height: 88px;
+  width: 114px;
+  height: 114px;
   overflow: hidden;
   background: #17171e;
 }
@@ -399,13 +399,13 @@ body {
   position: absolute;
   inset: 0;
   margin: auto;
-  width: 36px;
-  height: 36px;
+  width: 46px;
+  height: 46px;
   border-radius: 50%;
   border: none;
   background: var(--pink);
   color: #fff;
-  font-size: 13px;
+  font-size: 16px;
   display: grid;
   place-items: center;
   cursor: pointer;
@@ -420,45 +420,45 @@ body {
 }
 
 .album-card-info {
-  padding: 14px 16px;
+  padding: 18px 22px;
   display: flex;
   flex-direction: column;
   justify-content: center;
 }
 
 .album-card-info h3 {
-  margin: 0 0 4px;
-  font-size: 16px;
+  margin: 0 0 6px;
+  font-size: 21px;
   font-weight: 800;
 }
 
 .album-card-meta {
-  font-size: 12px;
+  font-size: 14px;
   color: var(--muted);
 }
 
 .album-banner {
   display: flex;
-  gap: 16px;
+  gap: 20px;
   align-items: center;
-  margin-bottom: 16px;
-  padding: 12px;
+  margin-bottom: 20px;
+  padding: 16px;
   background: rgba(0, 0, 0, 0.3);
-  border-radius: 12px;
+  border-radius: 14px;
 }
 
 .album-banner img {
-  width: 88px;
-  height: 88px;
+  width: 114px;
+  height: 114px;
   object-fit: cover;
-  border-radius: 8px;
+  border-radius: 10px;
   background: #17171e;
   flex-shrink: 0;
 }
 
 .album-banner-info h3 {
   margin: 4px 0 6px;
-  font-size: clamp(18px, 3.5vw, 26px);
+  font-size: clamp(22px, 3.5vw, 34px);
 }
 
 .eyebrow {
@@ -474,27 +474,52 @@ body {
   letter-spacing: 0.12em;
 }
 
-.track-list { display: grid; gap: 6px; }
+.track-list { display: grid; gap: 10px; }
 
 .track {
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
+  gap: 14px;
+  padding: 14px 16px;
   background: rgba(0, 0, 0, 0.25);
   border: 1px solid transparent;
-  border-radius: 10px;
+  border-radius: 12px;
   cursor: pointer;
-  transition: border-color 0.2s, background 0.2s;
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
   -webkit-tap-highlight-color: transparent;
 }
 
 .track:hover { background: rgba(255, 255, 255, 0.05); }
 
 .track.active {
-  border-color: rgba(255, 45, 145, 0.45);
-  background: rgba(255, 45, 145, 0.08);
+  border-color: rgba(255, 45, 145, 0.7);
+  background: linear-gradient(90deg, rgba(255, 45, 145, 0.22) 0%, rgba(255, 45, 145, 0.08) 60%, transparent 100%);
+  box-shadow: inset 3px 0 0 var(--pink), 0 0 20px rgba(255, 45, 145, 0.15);
+}
+
+.track.active.is-playing {
+  border-color: var(--pink);
+  background: linear-gradient(90deg, rgba(255, 45, 145, 0.32) 0%, rgba(40, 231, 255, 0.08) 55%, transparent 100%);
+  box-shadow: inset 4px 0 0 var(--pink), 0 0 28px rgba(255, 45, 145, 0.28);
+  animation: playing-pulse 2s ease-in-out infinite;
+}
+
+@keyframes playing-pulse {
+  0%, 100% { box-shadow: inset 4px 0 0 var(--pink), 0 0 18px rgba(255, 45, 145, 0.2); }
+  50% { box-shadow: inset 4px 0 0 var(--cyan), 0 0 28px rgba(40, 231, 255, 0.25); }
+}
+
+.track.active .track-info h3 {
+  color: #fff;
+}
+
+.track.active .track-no {
+  color: var(--pink);
+}
+
+.track.active .card-play {
+  box-shadow: 0 0 16px rgba(255, 45, 145, 0.65);
 }
 
 .track-play-wrap {
@@ -504,21 +529,21 @@ body {
 }
 
 .track-no {
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 800;
   color: var(--muted);
   text-align: center;
-  min-width: 22px;
+  min-width: 28px;
 }
 
 .track-info h3 {
-  margin: 0 0 2px;
-  font-size: 14px;
+  margin: 0 0 4px;
+  font-size: 18px;
   font-weight: 800;
 }
 
 .track-duration {
-  font-size: 11px;
+  font-size: 13px;
   color: var(--muted);
 }
 
@@ -532,11 +557,11 @@ body {
   background: var(--pink);
   color: #fff;
   border: none;
-  width: 36px;
-  height: 36px;
+  width: 46px;
+  height: 46px;
   padding: 0;
   font-weight: 800;
-  font-size: 12px;
+  font-size: 15px;
   letter-spacing: 0;
   border-radius: 50%;
   cursor: pointer;
@@ -604,7 +629,7 @@ body {
 }
 
 .site-footer {
-  padding: 16px 0 32px;
+  padding: 16px 0 140px;
   text-align: center;
 }
 
@@ -621,14 +646,17 @@ body {
   color: rgba(255, 255, 255, 0.22);
 }
 
-/* ── Player (hidden on site — only Media Session / lock screen) ── */
+/* ── Player (70% width, centered) ── */
 .player {
   position: fixed;
   z-index: 40;
-  left: 12px;
-  right: 12px;
+  left: 50%;
+  right: auto;
   bottom: 12px;
-  display: none; /* not shown on the website */
+  transform: translateX(-50%);
+  width: 70%;
+  max-width: 900px;
+  display: flex;
   flex-direction: column;
   gap: 10px;
   padding: 12px 16px 14px;
@@ -1020,7 +1048,53 @@ audio { display: none; }
   }
 
   .site-footer {
-    padding: 12px 0 28px;
+    padding: 12px 0 160px;
+  }
+
+  .player {
+    width: 92%;
+    max-width: none;
+    bottom: 8px;
+    padding: 10px 12px 12px;
+    border-radius: 14px;
+    gap: 8px;
+  }
+
+  .player-top {
+    flex-wrap: wrap;
+  }
+
+  .player-controls {
+    order: 3;
+    width: 100%;
+    justify-content: center;
+    margin-top: 2px;
+  }
+
+  .volume-row {
+    display: none;
+  }
+
+  .player-art img {
+    width: 42px;
+    height: 42px;
+  }
+
+  .album-card-info h3 {
+    font-size: 15px;
+  }
+
+  .album-card-meta {
+    font-size: 11px;
+  }
+
+  .album-banner img {
+    width: 72px;
+    height: 72px;
+  }
+
+  .album-banner-info h3 {
+    font-size: clamp(16px, 4vw, 22px);
   }
 }
 
