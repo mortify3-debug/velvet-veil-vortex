@@ -1,81 +1,171 @@
 const audio = document.getElementById('audio');
-const list = document.getElementById('track-list');
+const albumGrid = document.getElementById('album-grid');
+const trackPanel = document.getElementById('track-panel');
+const trackList = document.getElementById('track-list');
 const empty = document.getElementById('empty');
-const count = document.getElementById('track-count');
+const backBtn = document.getElementById('back-btn');
+const musicHeading = document.getElementById('music-heading');
 const playBtn = document.getElementById('play');
 const prevBtn = document.getElementById('prev');
 const nextBtn = document.getElementById('next');
+const shuffleBtn = document.getElementById('shuffle');
+const repeatBtn = document.getElementById('repeat');
 const seek = document.getElementById('seek');
-const currentTime = document.getElementById('current-time');
+const volume = document.getElementById('volume');
+const currentTimeEl = document.getElementById('current-time');
 const durationEl = document.getElementById('duration');
 const titleEl = document.getElementById('player-title');
 const playerCover = document.getElementById('player-cover');
 const playerDownload = document.getElementById('player-download');
+const listenBtn = document.getElementById('listen-btn');
+const musicSection = document.getElementById('music');
+const snapMain = document.getElementById('snap-main');
 
+let albums = [];
 let tracks = [];
 let current = -1;
+let shuffleOn = false;
+let repeatMode = 0; // 0 off, 1 all, 2 one
 
-const fmt = s => !Number.isFinite(s)
-  ? '0:00'
-  : `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+const fmt = s =>
+  !Number.isFinite(s)
+    ? '0:00'
+    : `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 
-const cleanTitle = n =>
-  n.replace(/\.[^.]+$/, '')
-   .replace(/^\s*\d+\s*[-_.]\s*/, '')
-   .trim() || n;
+const esc = s =>
+  String(s ?? '').replace(/[&<>"']/g, c =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[c])
+  );
 
-const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({
-  '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#039;'
-}[c]));
+function allTracks() {
+  return albums.flatMap(a =>
+    (a.tracks || []).map(t => ({
+      ...t,
+      cover: t.cover || a.cover || './assets/cover2.png',
+      albumTitle: a.title
+    }))
+  );
+}
 
-function render() {
-  list.innerHTML = '';
-  count.textContent = tracks.length
-    ? `${tracks.length} ${tracks.length === 1 ? 'ТРЕК' : 'ТРЕКОВ'}`
-    : '';
-  empty.hidden = tracks.length !== 0;
+function renderAlbums() {
+  albumGrid.innerHTML = '';
+  empty.hidden = albums.length !== 0;
+  albumGrid.hidden = false;
+  trackPanel.hidden = true;
+  backBtn.hidden = true;
+  musicHeading.textContent = 'АЛЬБОМЫ';
 
-  tracks.forEach((t, i) => {
+  albums.forEach((album, ai) => {
     const card = document.createElement('article');
-    card.className = 'track';
-    card.dataset.index = i;
+    card.className = 'album-card';
+    card.tabIndex = 0;
+    card.setAttribute('role', 'button');
+    card.setAttribute('aria-label', `Альбом ${album.title}`);
 
-    const cover = t.cover || './assets/cover.png';
+    const cover = album.cover || './assets/cover2.png';
+    const n = (album.tracks || []).length;
 
     card.innerHTML = `
-      <div class="track-cover">
-        <img src="${esc(cover)}" alt="${esc(t.title)}" onerror="this.onerror=null;this.src='./assets/cover.png'">
-        <button class="mini-play" aria-label="Воспроизвести ${esc(t.title)}">▶</button>
+      <div class="album-card-cover">
+        <img src="${esc(cover)}" alt="${esc(album.title)}"
+             onerror="this.onerror=null;this.src='./assets/cover2.png'">
+        <button type="button" class="album-card-play" aria-label="Играть ${esc(album.title)}">▶</button>
       </div>
+      <div class="album-card-info">
+        <h3>${esc(album.title)}</h3>
+        <div class="album-card-meta">${album.year ? esc(album.year) + ' · ' : ''}${n} ${n === 1 ? 'трек' : n < 5 ? 'трека' : 'треков'}</div>
+      </div>`;
+
+    const open = () => openAlbum(ai);
+    card.addEventListener('click', open);
+    card.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        open();
+      }
+    });
+    card.querySelector('.album-card-play').addEventListener('click', e => {
+      e.stopPropagation();
+      openAlbum(ai, true);
+    });
+
+    albumGrid.appendChild(card);
+  });
+}
+
+function openAlbum(ai, autoplayFirst = false) {
+  const album = albums[ai];
+  if (!album) return;
+
+  tracks = (album.tracks || []).map(t => ({
+    ...t,
+    cover: t.cover || album.cover || './assets/cover2.png',
+    albumTitle: album.title
+  }));
+
+  albumGrid.hidden = true;
+  trackPanel.hidden = false;
+  backBtn.hidden = false;
+  musicHeading.textContent = album.title;
+
+  document.getElementById('album-banner-cover').src = album.cover || './assets/cover2.png';
+  document.getElementById('album-banner-title').textContent = album.title;
+  document.getElementById('album-banner-year').textContent = album.year || '';
+  document.getElementById('album-banner-count').textContent =
+    tracks.length
+      ? `${tracks.length} ${tracks.length === 1 ? 'ТРЕК' : tracks.length < 5 ? 'ТРЕКА' : 'ТРЕКОВ'}`
+      : '';
+
+  renderTracks();
+  if (autoplayFirst && tracks.length) load(0, true);
+
+  const stage = document.querySelector('.music-stage');
+  if (stage) stage.scrollTop = 0;
+}
+
+function renderTracks() {
+  trackList.innerHTML = '';
+  tracks.forEach((t, i) => {
+    const row = document.createElement('article');
+    row.className = 'track' + (i === current ? ' active' : '');
+    row.dataset.index = i;
+
+    row.innerHTML = `
+      <div class="track-no">${String(i + 1).padStart(2, '0')}</div>
       <div class="track-info">
-        <div class="track-no">${String(i + 1).padStart(2, '0')}</div>
         <h3>${esc(t.title)}</h3>
         <span class="track-duration" data-duration="${i}">—:—</span>
       </div>
       <div class="track-actions">
-        <button class="card-play">▶ СЛУШАТЬ</button>
-        <a class="download-card" href="${esc(t.src)}" download>⇩ СКАЧАТЬ</a>
+        <button type="button" class="card-play">▶</button>
+        <a class="download-card" href="${esc(t.src)}" download>⇩</a>
       </div>`;
 
-    list.appendChild(card);
+    trackList.appendChild(row);
 
     const probe = new Audio();
     probe.preload = 'metadata';
     probe.src = t.src;
     probe.addEventListener('loadedmetadata', () => {
       t.duration = probe.duration;
-      const el = card.querySelector(`[data-duration="${i}"]`);
+      const el = row.querySelector(`[data-duration="${i}"]`);
       if (el) el.textContent = fmt(t.duration);
     });
 
-    card.querySelector('.mini-play').onclick = () => load(i, true);
-    card.querySelector('.card-play').onclick = () => load(i, true);
+    const play = () => load(i, true);
+    row.querySelector('.card-play').onclick = e => {
+      e.stopPropagation();
+      play();
+    };
+    row.onclick = e => {
+      if (e.target.closest('a')) return;
+      play();
+    };
   });
 }
 
 function load(i, autoplay = false) {
   if (!tracks[i]) return;
-
   current = i;
   const t = tracks[i];
 
@@ -83,10 +173,10 @@ function load(i, autoplay = false) {
   audio.load();
 
   titleEl.textContent = t.title;
-  playerCover.src = t.cover || './assets/cover.png';
+  playerCover.src = t.cover || './assets/cover2.png';
   playerCover.onerror = () => {
     playerCover.onerror = null;
-    playerCover.src = './assets/cover.png';
+    playerCover.src = './assets/cover2.png';
   };
 
   playerDownload.href = t.src;
@@ -96,27 +186,109 @@ function load(i, autoplay = false) {
     x.classList.toggle('active', n === i)
   );
 
-  if (autoplay) audio.play().catch(err => console.warn('Не удалось начать воспроизведение:', err));
+  if (autoplay) {
+    audio.play().catch(err => console.warn('Playback failed:', err));
+  }
 }
 
+function nextIndex() {
+  if (!tracks.length) return -1;
+  if (shuffleOn) {
+    if (tracks.length === 1) return 0;
+    let n;
+    do {
+      n = Math.floor(Math.random() * tracks.length);
+    } while (n === current);
+    return n;
+  }
+  return (current + 1) % tracks.length;
+}
+
+function goToMusic() {
+  musicSection.scrollIntoView({ behavior: 'smooth' });
+  setNav('music');
+}
+
+function setNav(which) {
+  document.querySelectorAll('.nav-link').forEach(a => {
+    a.classList.toggle('active', a.dataset.nav === which);
+  });
+}
+
+// Observe which section is in view
+if (snapMain) {
+  const io = new IntersectionObserver(
+    entries => {
+      entries.forEach(e => {
+        if (e.isIntersecting) setNav(e.target.id === 'music' ? 'music' : 'home');
+      });
+    },
+    { root: snapMain, threshold: 0.5 }
+  );
+  document.querySelectorAll('.cover').forEach(s => io.observe(s));
+}
+
+listenBtn.addEventListener('click', () => {
+  goToMusic();
+  if (!albums.length) return;
+  if (albums[0].tracks && albums[0].tracks.length) {
+    openAlbum(0, true);
+  } else {
+    tracks = allTracks();
+    if (tracks.length) load(0, true);
+  }
+});
+
+backBtn.addEventListener('click', () => {
+  renderAlbums();
+  const stage = document.querySelector('.music-stage');
+  if (stage) stage.scrollTop = 0;
+});
+
 playBtn.onclick = () => {
-  if (current < 0 && tracks.length) {
-    load(0, true);
+  if (current < 0) {
+    if (!tracks.length) tracks = allTracks();
+    if (tracks.length) {
+      load(0, true);
+      return;
+    }
     return;
   }
   audio.paused ? audio.play() : audio.pause();
 };
 
 prevBtn.onclick = () => {
-  if (tracks.length) load((current - 1 + tracks.length) % tracks.length, true);
+  if (!tracks.length) return;
+  if (audio.currentTime > 3) {
+    audio.currentTime = 0;
+    return;
+  }
+  load((current - 1 + tracks.length) % tracks.length, true);
 };
 
 nextBtn.onclick = () => {
-  if (tracks.length) load((current + 1) % tracks.length, true);
+  const n = nextIndex();
+  if (n >= 0) load(n, true);
 };
 
-audio.addEventListener('play', () => playBtn.textContent = '❚❚');
-audio.addEventListener('pause', () => playBtn.textContent = '▶');
+shuffleBtn.onclick = () => {
+  shuffleOn = !shuffleOn;
+  shuffleBtn.classList.toggle('on', shuffleOn);
+};
+
+repeatBtn.onclick = () => {
+  repeatMode = (repeatMode + 1) % 3;
+  repeatBtn.classList.toggle('on', repeatMode > 0);
+  repeatBtn.title = repeatMode === 2 ? 'Repeat one' : repeatMode === 1 ? 'Repeat all' : 'Repeat off';
+  audio.loop = repeatMode === 2;
+};
+
+audio.addEventListener('play', () => {
+  playBtn.textContent = '❚❚';
+});
+audio.addEventListener('pause', () => {
+  playBtn.textContent = '▶';
+});
 
 audio.addEventListener('loadedmetadata', () => {
   durationEl.textContent = fmt(audio.duration);
@@ -124,48 +296,57 @@ audio.addEventListener('loadedmetadata', () => {
 });
 
 audio.addEventListener('timeupdate', () => {
-  currentTime.textContent = fmt(audio.currentTime);
+  currentTimeEl.textContent = fmt(audio.currentTime);
   if (Number.isFinite(audio.duration) && audio.duration > 0 && !seek.matches(':active')) {
     seek.value = (audio.currentTime / audio.duration) * 100;
   }
 });
 
 audio.addEventListener('ended', () => {
-  if (tracks.length) load((current + 1) % tracks.length, true);
+  if (repeatMode === 2) return; // loop handles it
+  if (repeatMode === 1 || shuffleOn || current < tracks.length - 1) {
+    const n = nextIndex();
+    if (n >= 0) load(n, true);
+  }
 });
 
-// Перемотка мышью и пальцем.
-// input срабатывает во время перетаскивания, change — после отпускания.
 function seekTo(value) {
   if (!Number.isFinite(audio.duration) || audio.duration <= 0) return;
   const v = Math.max(0, Math.min(100, Number(value)));
-  audio.currentTime = audio.duration * v / 100;
+  audio.currentTime = (audio.duration * v) / 100;
 }
 
 seek.addEventListener('input', e => seekTo(e.target.value));
 seek.addEventListener('change', e => seekTo(e.target.value));
-seek.addEventListener('pointerdown', e => {
-  seek.setPointerCapture?.(e.pointerId);
-});
+seek.addEventListener('pointerdown', e => seek.setPointerCapture?.(e.pointerId));
 seek.addEventListener('pointermove', e => {
   if (e.buttons) seekTo(seek.value);
 });
 
-fetch('./songs.json?' + Date.now(), { cache: 'no-store' })
-  .then(r => r.ok ? r.json() : [])
+if (volume) {
+  audio.volume = volume.value / 100;
+  volume.addEventListener('input', () => {
+    audio.volume = volume.value / 100;
+  });
+}
+
+fetch('./albums.json?' + Date.now(), { cache: 'no-store' })
+  .then(r => (r.ok ? r.json() : []))
   .then(data => {
-    tracks = (Array.isArray(data) ? data : []).map(x =>
-      typeof x === 'string'
-        ? { src: x, title: cleanTitle(x.split('/').pop()), cover: './assets/cover.png' }
-        : {
-            ...x,
-            title: x.title || cleanTitle((x.src || '').split('/').pop()),
-            cover: x.cover || './assets/cover.png'
-          }
-    );
-    render();
+    albums = (Array.isArray(data) ? data : []).map(a => ({
+      id: a.id || (a.title || '').toLowerCase().replace(/\s+/g, '-'),
+      title: a.title || 'Без названия',
+      cover: a.cover || './assets/cover2.png',
+      year: a.year || '',
+      tracks: (a.tracks || []).map(t => ({
+        title: t.title || 'Трек',
+        src: t.src,
+        cover: t.cover
+      }))
+    }));
+    renderAlbums();
   })
   .catch(err => {
-    console.error('Ошибка загрузки songs.json:', err);
-    render();
+    console.error('Ошибка загрузки albums.json:', err);
+    renderAlbums();
   });

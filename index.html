@@ -4,78 +4,129 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#07070a">
-
-<title>Velvet Veil Vortex — музыка Сергея Попова | Рок, панк-рок, киберпанк</title>
-<meta name="description"
-  content="Velvet Veil Vortex — авторский музыкальный проект Сергея Попова из Тирасполя, Молдова. Рок, панк-рок и киберпанк музыка. Слушать онлайн и скачать MP3.">
- 
+  <title>Velvet Veil Vortex — музыка Сергея Попова | Рок, панк-рок, киберпанк</title>
+  <meta name="description"
+    content="Velvet Veil Vortex — авторский музыкальный проект Сергея Попова. Рок, панк-рок и киберпанк. Слушать онлайн и скачать MP3.">
   <meta name="author" content="Сергей Попов">
   <meta name="robots" content="index, follow">
   <link rel="stylesheet" href="./style.css">
 </head>
 <body>
-<header class="topbar">
-  <a class="brand" href="#home" aria-label="Velvet Veil Vortex">VELVET VEIL VORTEX</a>
-  <nav><a href="#home">ГЛАВНАЯ</a><a href="#music">МУЗЫКА</a></nav>
-</header>
-<main>
-<section id="home" class="hero">
-  <img class="hero-cover"
-     src="./assets/cover.png"
-     alt="Velvet Veil Vortex — музыка Сергея Попова, рок и киберпанк">
-  <div class="hero-shade"></div>
- 
-<div class="hero-content">
-  <div class="eyebrow">РОК / ПАНК-РОК / КИБЕРПАНК</div>
-  <h1>
-    VELVET VEIL<br><span>VORTEX</span>
-  </h1>
-  <p class="hero-subtitle">
-    Авторская музыка Сергея Попова из Тирасполя, Молдова.
-    Рок, панк-рок и киберпанк — слушать онлайн и скачать MP3.
-  </p>
-  <a class="hero-play" href="#music">
-    СЛУШАТЬ МУЗЫКУ <span>▶</span>
-  </a>
-</div>
-  
-</section>
-<section id="music" class="music-section">
-
-  <div class="section-head">
-    <div>
-      <div class="eyebrow">VELVET VEIL VORTEX</div>
-      <h2>МУЗЫКА — СЛУШАТЬ И СКАЧАТЬ</h2>
+  <header class="topbar">
+    <nav class="nav-left">
+      <a href="#home" class="nav-link active" data-nav="home">HOME</a>
+      <a href="#music" class="nav-link" data-nav="music">MUSIC</a>
+    </nav>
+    <div class="nav-social">
+      <a href="#" class="social" aria-label="YouTube" title="YouTube">▶</a>
+      <a href="#" class="social" aria-label="Spotify" title="Spotify">♪</a>
+      <a href="#" class="social" aria-label="X" title="X">𝕏</a>
+      <a href="#" class="social" aria-label="Instagram" title="Instagram">📷</a>
     </div>
-    <span id="track-count" class="count"></span>
+  </header>
+
+  <main class="snap-main" id="snap-main">
+    <!-- COVER 1 -->
+    <section id="home" class="cover cover-hero">
+      <img class="cover-bg" src="./assets/cover.png" alt="Velvet Veil Vortex" decoding="async">
+      <div class="cover-shade"></div>
+      <div class="cover-content">
+        <h1 class="brush-logo" aria-label="Velvet Veil Vortex">
+          <span class="brush-pink">VELVET VEIL</span>
+          <span class="brush-cyan">VORTEX</span>
+        </h1>
+        <p class="slogan">Громче чем музыка,</p>
+        <button type="button" class="listen-btn" id="listen-btn" aria-label="Слушать">
+          <span class="listen-icon">▶</span>
+          <span class="listen-text">СЛУШАТЬ</span>
+        </button>
+      </div>
+      <div class="scroll-hint" aria-hidden="true"><span>↓</span></div>
+    </section>
+
+    <!-- COVER 2 — cinematic, like the mockup -->
+    <section id="music" class="cover cover-music">
+      <img class="cover-bg cover-bg-music" src="./assets/cover2.png" alt="" decoding="async">
+      <div class="cover-shade cover-shade-music"></div>
+
+      <div class="music-stage">
+        <div class="music-brand">
+          <h2 class="brush-logo brush-logo-sm">
+            <span class="brush-pink">VELVET VEIL</span>
+            <span class="brush-cyan">VORTEX</span>
+          </h2>
+          <p class="slogan-en">LOUDER THAN YOUR FEARS</p>
+        </div>
+
+        <div class="music-panel">
+          <div class="section-head">
+            <h3 id="music-heading">АЛЬБОМЫ</h3>
+            <button type="button" class="back-btn" id="back-btn" hidden>← АЛЬБОМЫ</button>
+          </div>
+
+          <div id="album-grid" class="album-grid" aria-live="polite"></div>
+
+          <div id="track-panel" class="track-panel" hidden>
+            <div class="album-banner">
+              <img id="album-banner-cover" src="" alt="">
+              <div class="album-banner-info">
+                <div class="eyebrow" id="album-banner-year"></div>
+                <h3 id="album-banner-title"></h3>
+                <span id="album-banner-count" class="count"></span>
+              </div>
+            </div>
+            <div id="track-list" class="track-list"></div>
+          </div>
+
+          <div id="empty" class="empty" hidden>Добавьте альбомы в <b>albums.json</b></div>
+        </div>
+
+        <footer class="site-footer">
+          <p>Velvet Veil Vortex — авторская музыка Сергея Попова. Рок, панк-рок и киберпанк.</p>
+          <p class="copy">© 2026 Velvet Veil Vortex. All rights reserved.</p>
+        </footer>
+      </div>
+    </section>
+  </main>
+
+  <!-- Player — matches mockup -->
+  <div class="player" id="player">
+    <div class="player-left">
+      <div class="player-art">
+        <img id="player-cover" src="./assets/cover2.png" alt="">
+      </div>
+      <div class="player-meta">
+        <div class="player-title" id="player-title">Выберите песню</div>
+        <div class="player-artist">Velvet Veil Vortex</div>
+      </div>
+    </div>
+
+    <div class="player-center">
+      <div class="player-controls">
+        <button type="button" id="shuffle" class="ctrl-btn" aria-label="Перемешать" title="Shuffle">⇄</button>
+        <button type="button" id="prev" class="ctrl-btn" aria-label="Предыдущая">⏮</button>
+        <button type="button" id="play" class="play-btn" aria-label="Воспроизвести">▶</button>
+        <button type="button" id="next" class="ctrl-btn" aria-label="Следующая">⏭</button>
+        <button type="button" id="repeat" class="ctrl-btn" aria-label="Повтор" title="Repeat">↻</button>
+      </div>
+      <div class="progress-row">
+        <span id="current-time">0:00</span>
+        <input id="seek" type="range" min="0" max="100" value="0" aria-label="Перемотка">
+        <span id="duration">0:00</span>
+      </div>
+    </div>
+
+    <div class="player-right">
+      <div class="volume-row">
+        <span class="vol-icon" aria-hidden="true">🔊</span>
+        <input id="volume" type="range" min="0" max="100" value="90" aria-label="Громкость">
+      </div>
+      <a id="player-download" class="download" href="#" download hidden aria-label="Скачать">⇩</a>
+    </div>
+
+    <audio id="audio" preload="metadata"></audio>
   </div>
 
-  <p class="music-intro">
-    Слушайте авторские песни Velvet Veil Vortex онлайн и скачивайте MP3.
-    В проекте Сергея Попова сочетаются рок, панк-рок и киберпанк —
-    музыка о свободе, городе будущего, людях и чувствах.
-  </p>
-
-  <div id="track-list" class="track-list" aria-live="polite"></div>
-
-  <div id="empty" class="empty" hidden>
-    Добавь MP3 в папку <b>music/</b> и сделай Commit в GitHub.
-  </div>
-
-</section>
-</main>
-<div class="player" id="player">
-  <div class="player-art"><img id="player-cover" src="./assets/cover.png" alt=""></div>
-  <div class="player-main">
-    <div class="player-title" id="player-title">Выберите песню</div>
-    <div class="progress-row"><span id="current-time">0:00</span><input id="seek" type="range" min="0" max="100" value="0"><span id="duration">0:00</span></div>
-  </div>
-  <div class="player-controls">
-    <button id="prev" aria-label="Предыдущая">⏮</button><button id="play" class="play-btn" aria-label="Воспроизвести">▶</button><button id="next" aria-label="Следующая">⏭</button>
-  </div>
-  <a id="player-download" class="download" href="#" download hidden aria-label="Скачать">⇩</a>
-  <audio id="audio" preload="metadata"></audio>
-</div>
-<script src="./app.js"></script>
+  <script src="./app.js"></script>
 </body>
 </html>

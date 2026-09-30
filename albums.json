@@ -1,0 +1,38 @@
+[
+  {
+    "id": "dvorets",
+    "title": "Дворец",
+    "cover": "./assets/covers/Dvorets.jpg",
+    "year": "2025",
+    "tracks": [
+      {
+        "title": "Дворец",
+        "src": "./music/Dvorets.mp3"
+      },
+      {
+        "title": "Симуляция",
+        "src": "./music/Simulyacia.mp3"
+      },
+      {
+        "title": "Во сне я...",
+        "src": "./music/Vo%20sne%20ya...mp3"
+      },
+      {
+        "title": "Лифт летит",
+        "src": "./music/Lift%20letit.mp3"
+      }
+    ]
+  },
+  {
+    "id": "rekursiya",
+    "title": "Рекурсия миров",
+    "cover": "./assets/covers/Rekursiya%20mirov.jpg",
+    "year": "2025",
+    "tracks": [
+      {
+        "title": "Рекурсия миров",
+        "src": "./music/Rekursiya%20mirov.mp3"
+      }
+    ]
+  }
+]
