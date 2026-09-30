@@ -2,71 +2,26 @@
   {
     "title": "Дворец",
     "src": "./music/Dvorets.mp3",
-    "cover": "./assets/cover.png"
+     "cover": "./assets/covers/dvorets.jpg"
   },
   {
     "title": "Рекурсия миров",
     "src": "./music/Rekursiya%20mirov.mp3",
-    "cover": "./assets/cover.png"
+      "cover": "./assets/covers/Rekursiya mirov.jpg"
   },
   {
     "title": "Симуляция",
     "src": "./music/Simulyacia.mp3",
-    "cover": "./assets/cover.png"
-  },
-  {
-    "title": "Velvet Veil Vortex - Город грехов (2m 10s)",
-    "src": "./music/Velvet%20Veil%20Vortex%20-%20%D0%93%D0%BE%D1%80%D0%BE%D0%B4%20%D0%B3%D1%80%D0%B5%D1%85%D0%BE%D0%B2%20(2m%2010s).mp3",
-    "cover": "./assets/cover.png"
-  },
-  {
-    "title": "Velvet Veil Vortex - Живой (2m 12s)",
-    "src": "./music/Velvet%20Veil%20Vortex%20-%20%D0%96%D0%B8%D0%B2%D0%BE%D0%B9%20(2m%2012s).mp3",
-    "cover": "./assets/cover.png"
-  },
-  {
-    "title": "Velvet Veil Vortex - И пусть летит пыль (3m 01s)",
-    "src": "./music/Velvet%20Veil%20Vortex%20-%20%D0%98%20%D0%BF%D1%83%D1%81%D1%82%D1%8C%20%D0%BB%D0%B5%D1%82%D0%B8%D1%82%20%D0%BF%D1%8B%D0%BB%D1%8C%20(3m%2001s).mp3",
-    "cover": "./assets/cover.png"
-  },
-  {
-    "title": "Velvet Veil Vortex - КиберПанк (3m 49s)",
-    "src": "./music/Velvet%20Veil%20Vortex%20-%20%D0%9A%D0%B8%D0%B1%D0%B5%D1%80%D0%9F%D0%B0%D0%BD%D0%BA%20(3m%2049s).mp3",
-    "cover": "./assets/cover.png"
-  },
-  {
-    "title": "Velvet Veil Vortex - Мой хит (2m 34s)",
-    "src": "./music/Velvet%20Veil%20Vortex%20-%20%D0%9C%D0%BE%D0%B9%20%D1%85%D0%B8%D1%82%20(2m%2034s).mp3",
-    "cover": "./assets/cover.png"
-  },
-  {
-    "title": "Velvet Veil Vortex - Наташа (4m 42s)",
-    "src": "./music/Velvet%20Veil%20Vortex%20-%20%D0%9D%D0%B0%D1%82%D0%B0%D1%88%D0%B0%20(4m%2042s).mp3",
-    "cover": "./assets/cover.png"
-  },
-  {
-    "title": "Velvet Veil Vortex - Прыгай выше (2m 55s)",
-    "src": "./music/Velvet%20Veil%20Vortex%20-%20%D0%9F%D1%80%D1%8B%D0%B3%D0%B0%D0%B9%20%D0%B2%D1%8B%D1%88%D0%B5%20(2m%2055s).mp3",
-    "cover": "./assets/cover.png"
-  },
-  {
-    "title": "Velvet Veil Vortex - Психоз (3m 12s)",
-    "src": "./music/Velvet%20Veil%20Vortex%20-%20%D0%9F%D1%81%D0%B8%D1%85%D0%BE%D0%B7%20(3m%2012s).mp3",
-    "cover": "./assets/cover.png"
-  },
-  {
-    "title": "Velvet Veil Vortex - Реликт (2m 48s)",
-    "src": "./music/Velvet%20Veil%20Vortex%20-%20%D0%A0%D0%B5%D0%BB%D0%B8%D0%BA%D1%82%20(2m%2048s).mp3",
-    "cover": "./assets/cover.png"
+       "cover": "./assets/covers/dvorets.jpg"
   },
   {
     "title": "Во сне я...",
     "src": "./music/Vo%20sne%20ya...mp3",
-    "cover": "./assets/cover.png"
+       "cover": "./assets/covers/dvorets.jpg"
   },
   {
     "title": "Лифт летит",
     "src": "./music/%D0%9B%D0%B8%D1%84%D1%82%20%D0%BB%D0%B5%D1%82%D0%B8%D1%82.mp3",
-    "cover": "./assets/cover.png"
+       "cover": "./assets/covers/dvorets.jpg"
   }
 ]

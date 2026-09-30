@@ -26,7 +26,6 @@
   </header>
 
   <main class="snap-main" id="snap-main">
-    <!-- COVER 1 -->
     <section id="home" class="cover cover-hero">
       <img class="cover-bg" src="./assets/cover.png" alt="Velvet Veil Vortex" decoding="async">
       <div class="cover-shade"></div>
@@ -44,7 +43,6 @@
       <div class="scroll-hint" aria-hidden="true"><span>↓</span></div>
     </section>
 
-    <!-- COVER 2 — cinematic, like the mockup -->
     <section id="music" class="cover cover-music">
       <img class="cover-bg cover-bg-music" src="./assets/cover2.png" alt="" decoding="async">
       <div class="cover-shade cover-shade-music"></div>
@@ -89,19 +87,18 @@
     </section>
   </main>
 
-  <!-- Player — matches mockup -->
   <div class="player" id="player">
-    <div class="player-left">
-      <div class="player-art">
-        <img id="player-cover" src="./assets/cover2.png" alt="">
+    <div class="player-top">
+      <div class="player-left">
+        <div class="player-art">
+          <img id="player-cover" src="./assets/cover2.png" alt="">
+        </div>
+        <div class="player-meta">
+          <div class="player-title" id="player-title">Выберите песню</div>
+          <div class="player-artist">Velvet Veil Vortex</div>
+        </div>
       </div>
-      <div class="player-meta">
-        <div class="player-title" id="player-title">Выберите песню</div>
-        <div class="player-artist">Velvet Veil Vortex</div>
-      </div>
-    </div>
 
-    <div class="player-center">
       <div class="player-controls">
         <button type="button" id="shuffle" class="ctrl-btn" aria-label="Перемешать" title="Shuffle">⇄</button>
         <button type="button" id="prev" class="ctrl-btn" aria-label="Предыдущая">⏮</button>
@@ -109,22 +106,30 @@
         <button type="button" id="next" class="ctrl-btn" aria-label="Следующая">⏭</button>
         <button type="button" id="repeat" class="ctrl-btn" aria-label="Повтор" title="Repeat">↻</button>
       </div>
-      <div class="progress-row">
-        <span id="current-time">0:00</span>
-        <input id="seek" type="range" min="0" max="100" value="0" aria-label="Перемотка">
-        <span id="duration">0:00</span>
+
+      <div class="player-right">
+        <div class="volume-row" id="volume-row">
+          <span class="vol-icon" aria-hidden="true">🔊</span>
+          <div class="vol-bar" id="vol-bar" role="slider" aria-label="Громкость" aria-valuemin="0" aria-valuemax="100" aria-valuenow="90" tabindex="0">
+            <div class="vol-fill" id="vol-fill"></div>
+          </div>
+        </div>
+        <a id="player-download" class="download-btn" href="#" download hidden aria-label="Скачать MP3">↓ MP3</a>
       </div>
     </div>
 
-    <div class="player-right">
-      <div class="volume-row">
-        <span class="vol-icon" aria-hidden="true">🔊</span>
-        <input id="volume" type="range" min="0" max="100" value="90" aria-label="Громкость">
+    <div class="player-progress">
+      <span id="current-time">0:00</span>
+      <div class="seek-bar" id="seek-bar" role="slider" aria-label="Перемотка" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" tabindex="0">
+        <div class="seek-track">
+          <div class="seek-fill" id="seek-fill"></div>
+          <div class="seek-thumb" id="seek-thumb"></div>
+        </div>
       </div>
-      <a id="player-download" class="download" href="#" download hidden aria-label="Скачать">⇩</a>
+      <span id="duration">0:00</span>
     </div>
 
-    <audio id="audio" preload="metadata"></audio>
+    <audio id="audio" preload="auto"></audio>
   </div>
 
   <script src="./app.js"></script>

@@ -10,8 +10,11 @@ const prevBtn = document.getElementById('prev');
 const nextBtn = document.getElementById('next');
 const shuffleBtn = document.getElementById('shuffle');
 const repeatBtn = document.getElementById('repeat');
-const seek = document.getElementById('seek');
-const volume = document.getElementById('volume');
+const seekBar = document.getElementById('seek-bar');
+const seekFill = document.getElementById('seek-fill');
+const seekThumb = document.getElementById('seek-thumb');
+const volBar = document.getElementById('vol-bar');
+const volFill = document.getElementById('vol-fill');
 const currentTimeEl = document.getElementById('current-time');
 const durationEl = document.getElementById('duration');
 const titleEl = document.getElementById('player-title');
@@ -25,9 +28,9 @@ let albums = [];
 let tracks = [];
 let current = -1;
 let shuffleOn = false;
-let repeatMode = 0; // 0 off, 1 all, 2 one
+let repeatMode = 0;
 let isSeeking = false;
-let wasPlayingBeforeSeek = false;
+let seekPercent = 0;
 
 const fmt = s =>
   !Number.isFinite(s)
@@ -47,6 +50,48 @@ function allTracks() {
       albumTitle: a.title
     }))
   );
+}
+
+function setSeekUI(percent) {
+  const p = Math.max(0, Math.min(100, percent));
+  seekPercent = p;
+  seekFill.style.width = p + '%';
+  seekThumb.style.left = p + '%';
+  seekBar.setAttribute('aria-valuenow', String(Math.round(p)));
+}
+
+function setVolUI(percent) {
+  const p = Math.max(0, Math.min(100, percent));
+  volFill.style.width = p + '%';
+  volBar.setAttribute('aria-valuenow', String(Math.round(p)));
+  audio.volume = p / 100;
+}
+
+function percentFromEvent(el, e) {
+  const rect = el.getBoundingClientRect();
+  let clientX;
+  if (e.touches && e.touches.length) clientX = e.touches[0].clientX;
+  else if (e.changedTouches && e.changedTouches.length) clientX = e.changedTouches[0].clientX;
+  else clientX = e.clientX;
+  if (!rect.width || clientX == null) return 0;
+  return Math.max(0, Math.min(1, (clientX - rect.left) / rect.width)) * 100;
+}
+
+/** Apply seek to audio element — works while playing */
+function applySeek(percent) {
+  if (!Number.isFinite(audio.duration) || audio.duration <= 0) return false;
+  const t = (audio.duration * Math.max(0, Math.min(100, percent))) / 100;
+  // Clamp slightly below duration to avoid accidental 'ended'
+  const safe = Math.min(t, Math.max(0, audio.duration - 0.05));
+  try {
+    audio.currentTime = safe;
+    currentTimeEl.textContent = fmt(safe);
+    setSeekUI((safe / audio.duration) * 100);
+    return true;
+  } catch (err) {
+    console.warn('Seek failed:', err);
+    return false;
+  }
 }
 
 function renderAlbums() {
@@ -166,27 +211,40 @@ function renderTracks() {
   });
 }
 
+function sameTrack(i) {
+  if (i !== current || !tracks[i]) return false;
+  if (!audio.src) return false;
+  try {
+    const want = new URL(tracks[i].src, location.href).pathname;
+    const have = new URL(audio.src, location.href).pathname;
+    return decodeURIComponent(want) === decodeURIComponent(have);
+  } catch {
+    return false;
+  }
+}
+
 function load(i, autoplay = false) {
   if (!tracks[i]) return;
 
-  // Same track: just play/pause, don't reload (preserves seek position)
-  if (i === current && audio.src && audio.src.includes(tracks[i].src.replace(/^\.\//, ''))) {
+  // Same track already loaded — don't reset position
+  if (sameTrack(i)) {
     if (autoplay && audio.paused) {
       audio.play().catch(err => console.warn('Playback failed:', err));
     }
+    document.querySelectorAll('.track').forEach((x, n) =>
+      x.classList.toggle('active', n === i)
+    );
     return;
   }
 
   current = i;
   const t = tracks[i];
 
-  const nextSrc = t.src;
-  // Only reset src if different file
-  const abs = new URL(nextSrc, location.href).href;
-  if (audio.src !== abs) {
-    audio.src = nextSrc;
-    audio.load();
-  }
+  // Pause before changing src to avoid glitches
+  audio.pause();
+  audio.src = t.src;
+  // preload=auto helps seeking on many browsers
+  audio.load();
 
   titleEl.textContent = t.title;
   playerCover.src = t.cover || './assets/cover2.png';
@@ -198,6 +256,10 @@ function load(i, autoplay = false) {
   playerDownload.href = t.src;
   playerDownload.hidden = false;
 
+  setSeekUI(0);
+  currentTimeEl.textContent = '0:00';
+  durationEl.textContent = '0:00';
+
   document.querySelectorAll('.track').forEach((x, n) =>
     x.classList.toggle('active', n === i)
   );
@@ -206,10 +268,10 @@ function load(i, autoplay = false) {
     const tryPlay = () => {
       audio.play().catch(err => console.warn('Playback failed:', err));
     };
-    if (audio.readyState >= 1) {
+    if (audio.readyState >= 2) {
       tryPlay();
     } else {
-      audio.addEventListener('loadedmetadata', tryPlay, { once: true });
+      audio.addEventListener('canplay', tryPlay, { once: true });
     }
   }
 }
@@ -286,7 +348,7 @@ playBtn.onclick = () => {
 prevBtn.onclick = () => {
   if (!tracks.length) return;
   if (audio.currentTime > 3) {
-    audio.currentTime = 0;
+    applySeek(0);
     return;
   }
   load((current - 1 + tracks.length) % tracks.length, true);
@@ -318,10 +380,14 @@ audio.addEventListener('pause', () => {
 
 audio.addEventListener('loadedmetadata', () => {
   durationEl.textContent = fmt(audio.duration);
-  if (!isSeeking && audio.currentTime < 0.05) {
-    seek.value = 0;
-  } else if (Number.isFinite(audio.duration) && audio.duration > 0) {
-    seek.value = (audio.currentTime / audio.duration) * 100;
+  if (!isSeeking) {
+    setSeekUI(audio.duration > 0 ? (audio.currentTime / audio.duration) * 100 : 0);
+  }
+});
+
+audio.addEventListener('durationchange', () => {
+  if (Number.isFinite(audio.duration)) {
+    durationEl.textContent = fmt(audio.duration);
   }
 });
 
@@ -329,7 +395,7 @@ audio.addEventListener('timeupdate', () => {
   if (isSeeking) return;
   currentTimeEl.textContent = fmt(audio.currentTime);
   if (Number.isFinite(audio.duration) && audio.duration > 0) {
-    seek.value = (audio.currentTime / audio.duration) * 100;
+    setSeekUI((audio.currentTime / audio.duration) * 100);
   }
 });
 
@@ -338,97 +404,108 @@ audio.addEventListener('ended', () => {
   if (repeatMode === 1 || shuffleOn || current < tracks.length - 1) {
     const n = nextIndex();
     if (n >= 0) load(n, true);
+  } else {
+    setSeekUI(0);
+    currentTimeEl.textContent = '0:00';
   }
 });
 
-/* ── Seek (scrubbing) ── */
-function seekTo(percent) {
-  if (!Number.isFinite(audio.duration) || audio.duration <= 0) return false;
-  const v = Math.max(0, Math.min(100, Number(percent)));
-  const t = (audio.duration * v) / 100;
-  try {
-    audio.currentTime = t;
-    currentTimeEl.textContent = fmt(t);
-    seek.value = String(v);
-    return true;
-  } catch (err) {
-    console.warn('Seek failed:', err);
-    return false;
-  }
-}
-
-function beginSeek(e) {
+/* ── Custom seek bar (pointer + touch) ── */
+function onSeekStart(e) {
+  e.preventDefault();
   isSeeking = true;
-  wasPlayingBeforeSeek = !audio.paused;
-  // Don't pause — keep playing while scrubbing when possible
-  if (e && e.pointerId != null) {
-    try { seek.setPointerCapture(e.pointerId); } catch (_) {}
-  }
-}
-
-function endSeek() {
-  if (!isSeeking) return;
-  seekTo(seek.value);
-  isSeeking = false;
-  // Ensure playback continues if it was playing
-  if (wasPlayingBeforeSeek && audio.paused) {
-    audio.play().catch(() => {});
-  }
-}
-
-seek.addEventListener('pointerdown', e => {
-  beginSeek(e);
-  // Immediate seek on click position
-  seekTo(seek.value);
-});
-
-seek.addEventListener('input', e => {
-  isSeeking = true;
-  const v = Number(e.target.value);
-  // Live preview of time while dragging (don't force currentTime every frame on slow devices —
-  // but do set it so audio actually scrubs)
+  seekBar.classList.add('is-seeking');
+  const p = percentFromEvent(seekBar, e);
+  setSeekUI(p);
   if (Number.isFinite(audio.duration) && audio.duration > 0) {
-    const t = (audio.duration * v) / 100;
-    currentTimeEl.textContent = fmt(t);
-    // Apply seek during drag for responsive scrubbing
-    if (Math.abs(audio.currentTime - t) > 0.25) {
-      try { audio.currentTime = t; } catch (_) {}
-    }
+    currentTimeEl.textContent = fmt((audio.duration * p) / 100);
   }
-});
-
-seek.addEventListener('change', () => {
-  seekTo(seek.value);
-  isSeeking = false;
-  if (wasPlayingBeforeSeek && audio.paused) {
-    audio.play().catch(() => {});
+  // Capture so move works outside element
+  if (e.pointerId != null) {
+    try { seekBar.setPointerCapture(e.pointerId); } catch (_) {}
   }
-});
-
-seek.addEventListener('pointerup', endSeek);
-seek.addEventListener('pointercancel', endSeek);
-seek.addEventListener('touchend', endSeek);
-seek.addEventListener('mouseup', endSeek);
-
-// Keyboard support
-seek.addEventListener('keydown', e => {
-  if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
-    isSeeking = true;
-  }
-});
-seek.addEventListener('keyup', e => {
-  if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
-    seekTo(seek.value);
-    isSeeking = false;
-  }
-});
-
-if (volume) {
-  audio.volume = volume.value / 100;
-  volume.addEventListener('input', () => {
-    audio.volume = volume.value / 100;
-  });
 }
+
+function onSeekMove(e) {
+  if (!isSeeking) return;
+  e.preventDefault();
+  const p = percentFromEvent(seekBar, e);
+  setSeekUI(p);
+  if (Number.isFinite(audio.duration) && audio.duration > 0) {
+    currentTimeEl.textContent = fmt((audio.duration * p) / 100);
+  }
+}
+
+function onSeekEnd(e) {
+  if (!isSeeking) return;
+  if (e.cancelable) e.preventDefault();
+  // Use last drag position; also recompute from event when possible
+  let finalP = seekPercent;
+  try {
+    const p = percentFromEvent(seekBar, e);
+    if (Number.isFinite(p)) finalP = p;
+  } catch (_) {}
+  setSeekUI(finalP);
+  applySeek(finalP);
+  isSeeking = false;
+  seekBar.classList.remove('is-seeking');
+}
+
+seekBar.addEventListener('pointerdown', onSeekStart);
+seekBar.addEventListener('pointermove', onSeekMove);
+seekBar.addEventListener('pointerup', onSeekEnd);
+seekBar.addEventListener('pointercancel', onSeekEnd);
+
+// Fallback touch for older mobile browsers
+seekBar.addEventListener('touchstart', onSeekStart, { passive: false });
+seekBar.addEventListener('touchmove', onSeekMove, { passive: false });
+seekBar.addEventListener('touchend', onSeekEnd, { passive: false });
+
+// Keyboard
+seekBar.addEventListener('keydown', e => {
+  if (!Number.isFinite(audio.duration) || audio.duration <= 0) return;
+  let p = seekPercent;
+  if (e.key === 'ArrowRight') p = Math.min(100, p + 2);
+  else if (e.key === 'ArrowLeft') p = Math.max(0, p - 2);
+  else if (e.key === 'Home') p = 0;
+  else if (e.key === 'End') p = 100;
+  else return;
+  e.preventDefault();
+  applySeek(p);
+});
+
+/* ── Volume bar ── */
+let isVolSeeking = false;
+
+function onVolStart(e) {
+  e.preventDefault();
+  isVolSeeking = true;
+  setVolUI(percentFromEvent(volBar, e));
+  if (e.pointerId != null) {
+    try { volBar.setPointerCapture(e.pointerId); } catch (_) {}
+  }
+}
+
+function onVolMove(e) {
+  if (!isVolSeeking) return;
+  e.preventDefault();
+  setVolUI(percentFromEvent(volBar, e));
+}
+
+function onVolEnd(e) {
+  if (!isVolSeeking) return;
+  isVolSeeking = false;
+  const p = percentFromEvent(volBar, e);
+  if (Number.isFinite(p)) setVolUI(p);
+}
+
+volBar.addEventListener('pointerdown', onVolStart);
+volBar.addEventListener('pointermove', onVolMove);
+volBar.addEventListener('pointerup', onVolEnd);
+volBar.addEventListener('pointercancel', onVolEnd);
+
+// Init volume
+setVolUI(90);
 
 fetch('./albums.json?' + Date.now(), { cache: 'no-store' })
   .then(r => (r.ok ? r.json() : []))
