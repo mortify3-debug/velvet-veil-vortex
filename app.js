@@ -31,6 +31,7 @@ let shuffleOn = false;
 let repeatMode = 0;
 let isSeeking = false;
 let seekPercent = 0;
+let activeAlbumIndex = -1;
 
 const fmt = s =>
   !Number.isFinite(s)
@@ -77,19 +78,50 @@ function percentFromEvent(el, e) {
   return Math.max(0, Math.min(1, (clientX - rect.left) / rect.width)) * 100;
 }
 
-/** Apply seek to audio element — works while playing */
+/** Apply seek while track is playing — pause → set time → resume */
 function applySeek(percent) {
   if (!Number.isFinite(audio.duration) || audio.duration <= 0) return false;
   const t = (audio.duration * Math.max(0, Math.min(100, percent))) / 100;
-  // Clamp slightly below duration to avoid accidental 'ended'
-  const safe = Math.min(t, Math.max(0, audio.duration - 0.05));
+  const safe = Math.min(t, Math.max(0, audio.duration - 0.15));
+  const wasPlaying = !audio.paused;
+
+  currentTimeEl.textContent = fmt(safe);
+  setSeekUI((safe / audio.duration) * 100);
+
+  const finish = () => {
+    // Verify position stuck; retry once if browser ignored seek
+    if (Math.abs(audio.currentTime - safe) > 1.0) {
+      try { audio.currentTime = safe; } catch (_) {}
+    }
+    if (wasPlaying) {
+      const p = audio.play();
+      if (p && p.catch) p.catch(() => {});
+    }
+  };
+
   try {
-    audio.currentTime = safe;
-    currentTimeEl.textContent = fmt(safe);
-    setSeekUI((safe / audio.duration) * 100);
+    if (wasPlaying) audio.pause();
+
+    if (typeof audio.fastSeek === 'function') {
+      try { audio.fastSeek(safe); } catch (_) { audio.currentTime = safe; }
+    } else {
+      audio.currentTime = safe;
+    }
+
+    // Prefer seeked event; fallback timeout for stubborn browsers
+    let done = false;
+    const once = () => {
+      if (done) return;
+      done = true;
+      audio.removeEventListener('seeked', once);
+      finish();
+    };
+    audio.addEventListener('seeked', once);
+    setTimeout(once, 200);
     return true;
   } catch (err) {
     console.warn('Seek failed:', err);
+    if (wasPlaying) audio.play().catch(() => {});
     return false;
   }
 }
@@ -131,9 +163,11 @@ function renderAlbums() {
         open();
       }
     });
-    card.querySelector('.album-card-play').addEventListener('click', e => {
+    const playBtnAlbum = card.querySelector('.album-card-play');
+    playBtnAlbum.dataset.albumIndex = String(ai);
+    playBtnAlbum.addEventListener('click', e => {
       e.stopPropagation();
-      openAlbum(ai, true);
+      toggleAlbumPlay(ai);
     });
 
     albumGrid.appendChild(card);
@@ -144,6 +178,7 @@ function openAlbum(ai, autoplayFirst = false) {
   const album = albums[ai];
   if (!album) return;
 
+  activeAlbumIndex = ai;
   tracks = (album.tracks || []).map(t => ({
     ...t,
     cover: t.cover || album.cover || './assets/cover2.png',
@@ -199,14 +234,16 @@ function renderTracks() {
       if (el) el.textContent = fmt(t.duration);
     });
 
-    const play = () => load(i, true);
-    row.querySelector('.card-play').onclick = e => {
+    const btn = row.querySelector('.card-play');
+    btn.dataset.trackIndex = String(i);
+    const toggle = () => toggleTrackPlay(i);
+    btn.onclick = e => {
       e.stopPropagation();
-      play();
+      toggle();
     };
     row.onclick = e => {
       if (e.target.closest('a')) return;
-      play();
+      toggle();
     };
   });
 }
@@ -276,7 +313,92 @@ function load(i, autoplay = false) {
   }
 }
 
+
+function pathOf(src) {
+  try {
+    return decodeURIComponent(new URL(src, location.href).pathname);
+  } catch {
+    return src;
+  }
+}
+
+function isPlayingSrc(src) {
+  if (!audio.src || !src) return false;
+  return pathOf(audio.src) === pathOf(src);
+}
+
+/** Album ▶ button: play first track / pause / resume */
+function toggleAlbumPlay(ai) {
+  const album = albums[ai];
+  if (!album || !(album.tracks || []).length) return;
+
+  const albumSrcs = new Set((album.tracks || []).map(t => pathOf(t.src)));
+  const currentIsFromAlbum = audio.src && albumSrcs.has(pathOf(audio.src));
+
+  // Playing a track from this album → pause
+  if (!audio.paused && currentIsFromAlbum) {
+    audio.pause();
+    updatePlayButtons();
+    return;
+  }
+
+  // Paused on a track from this album → resume
+  if (audio.paused && currentIsFromAlbum && audio.readyState >= 1) {
+    audio.play().catch(() => {});
+    updatePlayButtons();
+    return;
+  }
+
+  // Otherwise open album and start first track
+  openAlbum(ai, true);
+}
+
+/** Track ▶ button: play / pause toggle */
+function toggleTrackPlay(i) {
+  if (!tracks[i]) return;
+
+  if (sameTrack(i)) {
+    if (audio.paused) {
+      audio.play().catch(err => console.warn('Playback failed:', err));
+    } else {
+      audio.pause();
+    }
+    updatePlayButtons();
+    return;
+  }
+  load(i, true);
+}
+
+function updatePlayButtons() {
+  const playing = !audio.paused && !!audio.src;
+
+  // Main player button handled by play/pause events
+
+  // Album cards
+  document.querySelectorAll('.album-card-play').forEach(btn => {
+    const ai = Number(btn.dataset.albumIndex);
+    const album = albums[ai];
+    if (!album) return;
+    const fromThis =
+      playing &&
+      album.tracks &&
+      album.tracks.some(t => isPlayingSrc(t.src));
+    btn.textContent = fromThis ? '❚❚' : '▶';
+    btn.classList.toggle('is-playing', fromThis);
+    btn.setAttribute('aria-label', fromThis ? 'Пауза' : `Играть ${album.title}`);
+  });
+
+  // Track rows
+  document.querySelectorAll('.track .card-play').forEach(btn => {
+    const i = Number(btn.dataset.trackIndex);
+    const on = playing && sameTrack(i);
+    btn.textContent = on ? '❚❚' : '▶';
+    btn.classList.toggle('is-playing', on);
+  });
+}
+
 function nextIndex() {
+
   if (!tracks.length) return -1;
   if (shuffleOn) {
     if (tracks.length === 1) return 0;
@@ -290,7 +412,7 @@ function nextIndex() {
 }
 
 function goToMusic() {
-  musicSection.scrollIntoView({ behavior: 'smooth' });
+  smoothGoTo(musicSection);
   setNav('music');
 }
 
@@ -373,9 +495,11 @@ repeatBtn.onclick = () => {
 
 audio.addEventListener('play', () => {
   playBtn.textContent = '❚❚';
+  updatePlayButtons();
 });
 audio.addEventListener('pause', () => {
   playBtn.textContent = '▶';
+  updatePlayButtons();
 });
 
 audio.addEventListener('loadedmetadata', () => {
@@ -506,6 +630,62 @@ volBar.addEventListener('pointercancel', onVolEnd);
 
 // Init volume
 setVolUI(90);
+
+
+/* ── Smooth full-page cover transitions ── */
+let scrollLock = false;
+
+function smoothGoTo(section) {
+  if (!section || !snapMain) return;
+  scrollLock = true;
+  section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  window.setTimeout(() => { scrollLock = false; }, 700);
+}
+
+if (snapMain) {
+  let wheelAcc = 0;
+  let wheelTimer = null;
+  snapMain.addEventListener(
+    'wheel',
+    e => {
+      // Don't hijack when scrolling inside music panel
+      const stage = e.target.closest('.music-stage');
+      if (stage && stage.scrollHeight > stage.clientHeight + 4) {
+        const atTop = stage.scrollTop <= 0 && e.deltaY < 0;
+        const atBottom =
+          stage.scrollTop + stage.clientHeight >= stage.scrollHeight - 2 && e.deltaY > 0;
+        if (!atTop && !atBottom) return;
+        if (atBottom && e.deltaY > 0) return; // stay in music
+      }
+      if (scrollLock) {
+        e.preventDefault();
+        return;
+      }
+      wheelAcc += e.deltaY;
+      clearTimeout(wheelTimer);
+      wheelTimer = setTimeout(() => { wheelAcc = 0; }, 200);
+      if (Math.abs(wheelAcc) < 40) return;
+      e.preventDefault();
+      const dir = wheelAcc > 0 ? 1 : -1;
+      wheelAcc = 0;
+      const sections = [...document.querySelectorAll('.cover')];
+      const y = snapMain.scrollTop;
+      let idx = 0;
+      let best = Infinity;
+      sections.forEach((s, i) => {
+        const d = Math.abs(s.offsetTop - y);
+        if (d < best) {
+          best = d;
+          idx = i;
+        }
+      });
+      const next = sections[idx + dir];
+      if (next) smoothGoTo(next);
+    },
+    { passive: false }
+  );
+}
+
 
 fetch('./albums.json?' + Date.now(), { cache: 'no-store' })
   .then(r => (r.ok ? r.json() : []))

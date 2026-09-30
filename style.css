@@ -86,6 +86,7 @@ body {
   overflow-y: auto;
   overflow-x: hidden;
   scroll-snap-type: y mandatory;
+  scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-y: contain;
 }
@@ -947,4 +948,18 @@ audio { display: none; }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   .scroll-hint { animation: none; }
+}
+
+
+.album-card-play.is-playing,
+.card-play.is-playing {
+  background: #fff !important;
+  color: var(--pink) !important;
+  box-shadow: 0 0 16px rgba(255, 255, 255, 0.35);
+}
+
+/* softer cover content fade */
+.cover-content,
+.music-stage {
+  transition: opacity 0.5s ease, transform 0.5s ease;
 }
