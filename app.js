@@ -745,6 +745,22 @@ if (volBar) {
 
 setupMediaSessionHandlers();
 
+/* Always start on the first cover (HOME), especially on mobile */
+if (snapMain) {
+  snapMain.scrollTop = 0;
+  requestAnimationFrame(() => {
+    snapMain.scrollTop = 0;
+  });
+}
+if (location.hash && location.hash !== '#home') {
+  /* allow deep-link only after first paint of hero */
+  const hash = location.hash;
+  history.replaceState(null, '', location.pathname + location.search);
+  setTimeout(() => {
+    if (hash === '#music' && musicSection) smoothGoTo(musicSection);
+  }, 400);
+}
+
 fetch('./albums.json?' + Date.now(), { cache: 'no-store' })
   .then(r => {
     if (!r.ok) throw new Error('albums.json HTTP ' + r.status);

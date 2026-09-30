@@ -1,10 +1,10 @@
 [
   {
-    "id": "киберпанк",
-    "title": "Киберпанк",
-    "cover": "./assets/covers/cyberpunk.jpg",
+    "id": "рекурсия-миров",
+    "title": "Рекурсия миров",
+    "cover": "./assets/covers/rekursia-mirov.jpg",
     "year": "",
-    "folder": "Киберпанк",
+    "folder": "Рекурсия миров",
     "tracks": []
   },
   {
@@ -16,11 +16,11 @@
     "tracks": []
   },
   {
-    "id": "рекурсия-миров",
-    "title": "Рекурсия миров",
-    "cover": "./assets/covers/rekursia-mirov.jpg",
+    "id": "киберпанк",
+    "title": "Киберпанк",
+    "cover": "./assets/covers/cyberpunk.jpg",
     "year": "",
-    "folder": "Рекурсия миров",
+    "folder": "Киберпанк",
     "tracks": []
   }
 ]

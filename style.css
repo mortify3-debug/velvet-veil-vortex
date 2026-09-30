@@ -12,6 +12,8 @@
 html {
   scroll-behavior: smooth;
   height: 100%;
+  height: 100svh;
+  height: 100dvh;
 }
 
 body {
@@ -20,7 +22,13 @@ body {
   color: var(--text);
   font-family: Arial, Helvetica, sans-serif;
   height: 100%;
+  height: 100svh;
+  height: 100dvh;
   overflow: hidden;
+  /* prevent rubber-band revealing blank area on iOS */
+  position: fixed;
+  inset: 0;
+  width: 100%;
 }
 
 /* ── Top bar ── */
@@ -82,6 +90,7 @@ body {
 /* ── Snap ── */
 .snap-main {
   height: 100%;
+  height: 100svh;
   height: 100dvh;
   overflow-y: auto;
   overflow-x: hidden;
@@ -89,16 +98,27 @@ body {
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-y: contain;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.snap-main::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .cover {
   min-height: 100%;
+  min-height: 100svh;
   min-height: 100dvh;
   height: 100%;
+  height: 100svh;
   height: 100dvh;
   scroll-snap-align: start;
   scroll-snap-stop: always;
   position: relative;
+  flex-shrink: 0;
 }
 
 .cover-bg {
@@ -111,13 +131,17 @@ body {
   display: block;
   min-height: 100%;
   min-width: 100%;
+  z-index: 0;
 }
 
 /* ── Cover 1 ── */
 .cover-hero {
   display: flex;
   align-items: center;
+  justify-content: flex-start;
   overflow: hidden;
+  /* solid fallback so first screen is never blank while image loads */
+  background: #07070a;
 }
 
 .cover-shade {
@@ -253,6 +277,7 @@ body {
   z-index: 2;
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
   padding: 64px 4vw 20px;
   max-width: 720px;
@@ -262,10 +287,13 @@ body {
   -ms-overflow-style: none; /* IE/Edge */
 }
 
-.music-stage::-webkit-scrollbar {
-  display: none; /* Chrome/Safari */
-  width: 0;
-  height: 0;
+.music-stage::-webkit-scrollbar,
+.music-stage::-webkit-scrollbar-thumb,
+.music-stage::-webkit-scrollbar-track {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  background: transparent !important;
 }
 
 .music-brand { margin-bottom: 18px; }
@@ -958,14 +986,37 @@ audio { display: none; }
     font-size: 16px;
   }
 
-  .cover-hero {
-    /* ensure first cover is fully visible on mobile */
-    min-height: 100dvh;
+  .snap-main {
+    height: 100svh;
     height: 100dvh;
   }
 
+  .cover,
+  .cover-hero,
+  .cover-music {
+    min-height: 100svh;
+    min-height: 100dvh;
+    height: 100svh;
+    height: 100dvh;
+  }
+
+  .cover-hero {
+    display: flex;
+    align-items: center;
+    padding-top: env(safe-area-inset-top, 0);
+  }
+
   .cover-bg {
+    object-position: center 30%;
+  }
+
+  .cover-hero .cover-bg {
     object-position: center center;
+  }
+
+  .cover-content {
+    padding-top: 12px;
+    padding-bottom: 24px;
   }
 
   .site-footer {

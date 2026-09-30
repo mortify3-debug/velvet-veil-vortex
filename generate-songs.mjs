@@ -27,7 +27,8 @@ const russianTitles = {
   'rekursiya mirov': 'Рекурсия миров'
 };
 
-const order = ['Киберпанк', 'Город света', 'Рекурсия миров'];
+/* newest first → oldest last */
+const order = ['Рекурсия миров', 'Город света', 'Киберпанк'];
 
 const cleanBase = name =>
   name.replace(/\.[^.]+$/, '').replace(/^\s*\d+\s*[-_.]\s*/, '').trim();
