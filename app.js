@@ -146,7 +146,7 @@ function renderAlbums() {
     card.setAttribute('role', 'button');
     card.setAttribute('aria-label', `Альбом ${album.title}`);
 
-    const cover = album.cover || './assets/cover2.png';
+    const cover = album.cover || './assets/cover2.jpg';
     const n = (album.tracks || []).length;
     const meta = [
       album.year || null,
@@ -157,7 +157,7 @@ function renderAlbums() {
       <div class="album-card-cover">
         <img src="${esc(cover)}" alt="${esc(album.title)}"
              loading="lazy"
-             onerror="this.onerror=null;this.src='./assets/cover2.png'">
+             onerror="this.onerror=null;this.src='./assets/cover2.jpg'">
         <button type="button" class="album-card-play" data-album-index="${ai}"
                 aria-label="Играть ${esc(album.title)}" ${n ? '' : 'disabled'}>▶</button>
       </div>
@@ -192,7 +192,7 @@ function openAlbum(ai, autoplayFirst = false) {
   activeAlbumIndex = ai;
   tracks = (album.tracks || []).map(t => ({
     ...t,
-    cover: t.cover || album.cover || './assets/cover2.png',
+    cover: t.cover || album.cover || './assets/cover2.jpg',
     albumTitle: album.title
   }));
 
@@ -201,7 +201,7 @@ function openAlbum(ai, autoplayFirst = false) {
   backBtn.hidden = false;
   musicHeading.textContent = album.title;
 
-  document.getElementById('album-banner-cover').src = album.cover || './assets/cover2.png';
+  document.getElementById('album-banner-cover').src = album.cover || './assets/cover2.jpg';
   document.getElementById('album-banner-title').textContent = album.title;
   document.getElementById('album-banner-year').textContent = album.year || '';
   document.getElementById('album-banner-count').textContent = tracks.length
@@ -334,16 +334,16 @@ function absoluteUrl(path) {
 
 function updateMediaSession(t) {
   if (!('mediaSession' in navigator) || !t) return;
-  const cover = absoluteUrl(t.cover || './assets/cover2.png');
+  const cover = absoluteUrl(t.cover || './assets/cover2.jpg');
   try {
     navigator.mediaSession.metadata = new MediaMetadata({
       title: t.title || 'Velvet Veil Vortex',
       artist: 'Velvet Veil Vortex',
       album: t.albumTitle || 'Velvet Veil Vortex',
       artwork: [
-        { src: cover, sizes: '512x512', type: 'image/png' },
-        { src: cover, sizes: '256x256', type: 'image/png' },
-        { src: absoluteUrl('./assets/cover.png'), sizes: '512x512', type: 'image/png' }
+        { src: cover, sizes: '512x512', type: 'image/jpeg' },
+        { src: cover, sizes: '256x256', type: 'image/jpeg' },
+        { src: absoluteUrl('./assets/cover.jpg'), sizes: '512x512', type: 'image/jpeg' }
       ]
     });
     navigator.mediaSession.playbackState = audio.paused ? 'paused' : 'playing';
@@ -417,10 +417,10 @@ function load(i, autoplay = false) {
 
   if (titleEl) titleEl.textContent = t.title;
   if (playerCover) {
-    playerCover.src = t.cover || './assets/cover2.png';
+    playerCover.src = t.cover || './assets/cover2.jpg';
     playerCover.onerror = () => {
       playerCover.onerror = null;
-      playerCover.src = './assets/cover2.png';
+      playerCover.src = './assets/cover2.jpg';
     };
   }
 
@@ -599,7 +599,7 @@ playBtn.onclick = () => {
     const all = albums.flatMap(a =>
       (a.tracks || []).map(t => ({
         ...t,
-        cover: t.cover || a.cover || './assets/cover2.png',
+        cover: t.cover || a.cover || './assets/cover2.jpg',
         albumTitle: a.title
       }))
     );
@@ -779,7 +779,7 @@ fetch('./albums.json?' + Date.now(), { cache: 'no-store' })
     albums = (Array.isArray(data) ? data : []).map(a => ({
       id: a.id || (a.title || '').toLowerCase().replace(/\s+/g, '-'),
       title: a.title || 'Без названия',
-      cover: a.cover || './assets/cover2.png',
+      cover: a.cover || './assets/cover2.jpg',
       year: a.year || '',
       folder: a.folder || a.title || '',
       tracks: Array.isArray(a.tracks) ? a.tracks : []

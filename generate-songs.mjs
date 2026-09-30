@@ -73,7 +73,7 @@ function findCover(folderName) {
       return `./assets/covers/${encodeURIComponent(file)}`;
     }
   }
-  return './assets/cover2.png';
+  return './assets/cover2.jpg';
 }
 
 const entries = await readdir(musicDir, { withFileTypes: true });
