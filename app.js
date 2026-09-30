@@ -211,35 +211,9 @@ function openAlbum(ai, autoplayFirst = false) {
   renderTracks();
   if (autoplayFirst && tracks.length) load(0, true);
 
-  /* Desktop/mobile: pin second cover to top, album panel at the top of it */
-  pinAlbumToTop();
-}
-
-function pinAlbumToTop() {
+  /* Only reset inner list scroll — no forced page jump */
   const stage = document.querySelector('.music-stage');
-  const panel = document.querySelector('.music-panel') || trackPanel;
-
-  const run = () => {
-    if (musicSection && snapMain) {
-      /* hard-align second cover to the top of the viewport */
-      snapMain.scrollTop = musicSection.offsetTop;
-      musicSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-    if (stage) {
-      stage.scrollTop = 0;
-    }
-    /* ensure banner / track list starts at the top of the stage */
-    if (panel && stage) {
-      const topPad = 8;
-      const y = Math.max(0, panel.offsetTop - topPad);
-      stage.scrollTo({ top: y, behavior: 'smooth' });
-    }
-  };
-
-  run();
-  requestAnimationFrame(run);
-  setTimeout(run, 120);
-  setTimeout(run, 380);
+  if (stage) stage.scrollTop = 0;
 }
 
 function renderTracks() {
