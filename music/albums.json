@@ -1,0 +1,49 @@
+[
+  {
+    "id": "cyberpunk",
+    "title": "Киберпанк",
+    "cover": "./assets/covers/cyberpunk.jpg",
+    "year": "2025",
+    "folder": "Киберпанк",
+    "tracks": [
+      {
+        "title": "Дворец",
+        "src": "./music/Киберпанк/Dvorets.mp3"
+      },
+      {
+        "title": "Лифт летит",
+        "src": "./music/Киберпанк/Lift%20letit.mp3"
+      }
+    ]
+  },
+  {
+    "id": "gorod-sveta",
+    "title": "Город света",
+    "cover": "./assets/covers/gorodsveta.jpg",
+    "year": "2025",
+    "folder": "Город света",
+    "tracks": [
+      {
+        "title": "Симуляция",
+        "src": "./music/Город%20света/Simulyacia.mp3"
+      },
+      {
+        "title": "Во сне я...",
+        "src": "./music/Город%20света/Vo%20sne%20ya...mp3"
+      }
+    ]
+  },
+  {
+    "id": "rekursiya-mirov",
+    "title": "Рекурсия миров",
+    "cover": "./assets/covers/rekursia-mirov.jpg",
+    "year": "2026",
+    "folder": "Рекурсия миров",
+    "tracks": [
+      {
+        "title": "Рекурсия миров",
+        "src": "./music/Рекурсия%20миров/Rekursiya%20mirov.mp3"
+      }
+    ]
+  }
+]
