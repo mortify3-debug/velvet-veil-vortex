@@ -637,12 +637,65 @@ if (snapMain) {
   );
 }
 
-listenBtn.addEventListener('click', () => {
-  goToMusic();
-  if (!albums.length) return;
-  const withTracks = albums.findIndex(a => a.tracks && a.tracks.length);
-  if (withTracks >= 0) openAlbum(withTracks, true);
-});
+function getNewestTrackInfo() {
+  /* albums[0] = newest album; last track in list = newest song */
+  if (!albums.length) return null;
+  for (let i = 0; i < albums.length; i++) {
+    const a = albums[i];
+    const list = a.tracks || [];
+    if (!list.length) continue;
+    const t = list[list.length - 1];
+    return {
+      albumIndex: i,
+      trackIndex: list.length - 1,
+      title: t.title || 'NEW TRACK',
+      albumTitle: a.title || '',
+      label: list.length === 1 ? 'NEW SINGLE' : 'NEW TRACK'
+    };
+  }
+  /* no tracks yet — still show newest album name */
+  return {
+    albumIndex: 0,
+    trackIndex: -1,
+    title: albums[0].title || 'LISTEN',
+    albumTitle: albums[0].title || '',
+    label: 'NEW ALBUM'
+  };
+}
+
+function updateListenButton() {
+  const info = getNewestTrackInfo();
+  const titleEl = document.getElementById('listen-title');
+  const labelEl = document.getElementById('listen-label');
+  if (!info) {
+    if (titleEl) titleEl.textContent = 'LISTEN';
+    if (labelEl) labelEl.textContent = 'MUSIC';
+    return;
+  }
+  if (titleEl) titleEl.textContent = String(info.title).toUpperCase();
+  if (labelEl) labelEl.textContent = info.label;
+  if (listenBtn) {
+    listenBtn.setAttribute(
+      'aria-label',
+      `Слушать ${info.title}`
+    );
+  }
+}
+
+if (listenBtn) {
+  listenBtn.addEventListener('click', () => {
+    goToMusic();
+    if (!albums.length) return;
+    const info = getNewestTrackInfo();
+    if (!info) return;
+    if (info.trackIndex >= 0) {
+      openAlbum(info.albumIndex, false);
+      load(info.trackIndex, true);
+    } else {
+      openAlbum(info.albumIndex, true);
+    }
+  });
+}
 
 function goBackToAlbums() {
   renderAlbums(-1);
@@ -845,10 +898,12 @@ fetch('./albums.json?' + Date.now(), { cache: 'no-store' })
       tracks: Array.isArray(a.tracks) ? a.tracks : []
     }));
     renderAlbums();
+    updateListenButton();
   })
   .catch(err => {
     console.error('Ошибка загрузки albums.json:', err);
     empty.hidden = false;
     empty.textContent = 'Не удалось загрузить albums.json';
     renderAlbums();
+    updateListenButton();
   });
