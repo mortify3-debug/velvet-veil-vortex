@@ -1197,26 +1197,14 @@ fetch('./albums.json?' + Date.now(), { cache: 'no-store' })
       || document.querySelector('.album-card-cover img');
     const player = document.getElementById('player');
 
-    // Anchor the visualizer to the exact horizontal center of the player,
-    // rather than to the album cover. Make it deliberately wider than the player.
-    let centerX = window.innerWidth / 2;
-    let width = Math.min(window.innerWidth * 0.94, 1100);
-
-    if (player) {
-      const pr = player.getBoundingClientRect();
-      if (pr.width > 0) {
-        centerX = pr.left + pr.width / 2;
-        width = pr.width;
-      }
-    }
-
-    const finalWidth = Math.max(1, Math.min(width, window.innerWidth));
-    const finalLeft = Math.max(0, Math.min(window.innerWidth - finalWidth, centerX - finalWidth / 2));
+    // Stretch visualizer to full viewport width (full width of the cover area).
+    const finalWidth = window.innerWidth;
+    const finalLeft = 0;
     visualizer.style.left = `${finalLeft}px`;
     visualizer.style.width = `${finalWidth}px`;
     visualizer.style.display = 'block';
     visualizer.style.visibility = 'visible';
-    visualizer.style.opacity = '1';
+    visualizer.style.opacity = '0.55';
 
     // Put the visualizer baseline exactly on the player's seek/progress line.
     // The visualizer stays behind the player, while the transparent player
@@ -1254,9 +1242,9 @@ fetch('./albums.json?' + Date.now(), { cache: 'no-store' })
     // Baseline is placed in the lower portion of the lower-third visualizer zone.
     const base = h * 0.82;
     const g = ctx.createLinearGradient(0, 0, w, 0);
-    g.addColorStop(0, 'rgba(46,240,255,.62)');
-    g.addColorStop(.5, 'rgba(190,150,255,.64)');
-    g.addColorStop(1, 'rgba(255,45,145,.62)');
+    g.addColorStop(0, 'rgba(46,240,255,.28)');
+    g.addColorStop(.5, 'rgba(190,150,255,.30)');
+    g.addColorStop(1, 'rgba(255,45,145,.28)');
 
     ctx.beginPath();
     if (!active || !analyser) {
@@ -1288,11 +1276,11 @@ fetch('./albums.json?' + Date.now(), { cache: 'no-store' })
     }
 
     ctx.strokeStyle = g;
-    ctx.lineWidth = Math.max(2.5, h * 0.025);
+    ctx.lineWidth = Math.max(2.2, h * 0.022);
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
-    ctx.shadowBlur = active ? 14 : 8;
-    ctx.shadowColor = 'rgba(46,240,255,.55)';
+    ctx.shadowBlur = active ? 10 : 6;
+    ctx.shadowColor = 'rgba(46,240,255,.28)';
     ctx.stroke();
     ctx.shadowBlur = 0;
   };
