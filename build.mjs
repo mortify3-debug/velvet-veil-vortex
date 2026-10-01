@@ -28,7 +28,8 @@ for (const f of [
   'app.js',
   'albums.json',
   'songs.json',
-  '_headers'
+  '_headers',
+  'site.webmanifest'
 ]) {
   await copyIfExists(f);
 }

@@ -151,7 +151,18 @@ function renderAlbums(expandIndex = -1) {
 
   const anyExpanded = expandIndex >= 0;
 
-  albums.forEach((album, ai) => {
+  /* Collapsed albums always first (above tracks); expanded album last */
+  const order = albums.map((_, ai) => ai);
+  if (anyExpanded) {
+    order.sort((a, b) => {
+      if (a === expandIndex) return 1;
+      if (b === expandIndex) return -1;
+      return a - b;
+    });
+  }
+
+  order.forEach(ai => {
+    const album = albums[ai];
     const expanded = ai === expandIndex;
     const cover = album.cover || './assets/cover2.jpg';
     const n = (album.tracks || []).length;
@@ -190,7 +201,6 @@ function renderAlbums(expandIndex = -1) {
 
     const open = () => {
       if (expanded) {
-        /* click again on expanded header → collapse all to list */
         renderAlbums(-1);
       } else {
         openAlbum(ai, false);
