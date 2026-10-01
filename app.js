@@ -44,6 +44,79 @@ const esc = s =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[c])
   );
 
+/** Strip control chars / limit length for display text from JSON */
+const safeText = (s, max = 200) =>
+  String(s ?? '')
+    .replace(/[\u0000-\u001F\u007F]/g, '')
+    .slice(0, max);
+
+/**
+ * Only allow same-origin relative media under ./music or ./assets.
+ * Blocks javascript:, data:, //evil, path traversal, external hosts.
+ */
+function safeMediaUrl(raw, kind = 'any') {
+  if (raw == null) return '';
+  let s = String(raw).trim().replace(/\\/g, '/');
+  if (!s || /[\u0000-\u001F\u007F]/.test(s)) return '';
+  // reject schemes and protocol-relative URLs
+  if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(s) || s.startsWith('//')) return '';
+  if (s.includes('..')) return '';
+  if (!s.startsWith('./') && !s.startsWith('/')) s = './' + s;
+
+  let resolved;
+  try {
+    resolved = new URL(s, location.href);
+  } catch {
+    return '';
+  }
+  if (resolved.origin !== location.origin) return '';
+  if (resolved.username || resolved.password) return '';
+
+  // Decode once for checks; keep original relative form if safe
+  let path;
+  try {
+    path = decodeURIComponent(resolved.pathname).replace(/^\/+/, '');
+  } catch {
+    return '';
+  }
+  if (path.includes('..')) return '';
+  if (!(path.startsWith('music/') || path.startsWith('assets/'))) return '';
+
+  const lower = path.toLowerCase();
+  const audioOk = /\.(mp3|m4a|ogg|wav)$/.test(lower);
+  const imageOk = /\.(png|jpe?g|webp|gif)$/.test(lower);
+  if (kind === 'audio' && !audioOk) return '';
+  if (kind === 'image' && !imageOk) return '';
+  if (kind === 'any' && !audioOk && !imageOk) return '';
+
+  // Return path-relative URL (preserve encoding from source if already encoded)
+  const rel = './' + resolved.pathname.replace(/^\/+/, '');
+  return rel;
+}
+
+function sanitizeAlbums(data) {
+  if (!Array.isArray(data)) return [];
+  return data.slice(0, 100).map(a => {
+    const tracks = Array.isArray(a?.tracks) ? a.tracks : [];
+    return {
+      id: safeText(a?.id || a?.title || 'album', 80)
+        .toLowerCase()
+        .replace(/\s+/g, '-')
+        .replace(/[^a-z0-9а-яё_\-]/gi, '')
+        .slice(0, 80) || 'album',
+      title: safeText(a?.title || 'Без названия', 120),
+      cover: safeMediaUrl(a?.cover, 'image') || './assets/cover2.jpg',
+      year: safeText(a?.year || '', 12),
+      folder: safeText(a?.folder || a?.title || '', 120),
+      tracks: tracks.slice(0, 200).map(t => ({
+        title: safeText(t?.title || 'Трек', 120),
+        src: safeMediaUrl(t?.src, 'audio'),
+        cover: safeMediaUrl(t?.cover, 'image') || undefined
+      })).filter(t => !!t.src)
+    };
+  });
+}
+
 function pathOf(src) {
   try {
     return decodeURIComponent(new URL(src, location.href).pathname);
@@ -182,9 +255,7 @@ function renderAlbums(expandIndex = -1) {
     card.innerHTML = `
       <div class="album-card-row">
         <div class="album-card-cover">
-          <img src="${esc(cover)}" alt="${esc(album.title)}"
-               loading="lazy"
-               onerror="this.onerror=null;this.src='./assets/cover2.jpg'">
+          <img alt="${esc(album.title)}" loading="lazy">
           <button type="button" class="album-card-play" data-album-index="${ai}"
                   aria-label="Играть ${esc(album.title)}" ${n ? '' : 'disabled'}>▶</button>
         </div>
@@ -195,6 +266,15 @@ function renderAlbums(expandIndex = -1) {
         <span class="album-card-chevron" aria-hidden="true">${expanded ? '▾' : '▸'}</span>
       </div>
       <div class="album-card-tracks" ${expanded ? '' : 'hidden'}></div>`;
+
+    const coverImg = card.querySelector('.album-card-cover img');
+    if (coverImg) {
+      const safeCover = safeMediaUrl(cover, 'image') || './assets/cover2.jpg';
+      coverImg.src = safeCover;
+      coverImg.addEventListener('error', () => {
+        coverImg.src = './assets/cover2.jpg';
+      }, { once: true });
+    }
 
     const header = card.querySelector('.album-card-row');
     const tracksBox = card.querySelector('.album-card-tracks');
@@ -270,7 +350,7 @@ function renderTracksInto(container) {
 
   if (!tracks.length) {
     container.innerHTML =
-      '<div class="empty" style="padding:16px 8px">В этом альбоме пока нет MP3.<br>Положите файлы в <b>music/' +
+      '<div class="empty empty-album">В этом альбоме пока нет MP3.<br>Положите файлы в <b>music/' +
       esc(albums[activeAlbumIndex]?.folder || '') +
       '/</b></div>';
     return;
@@ -296,17 +376,32 @@ function renderTracksInto(container) {
         <div class="track-vol" data-vol-row="${i}">
           <span class="vol-icon" aria-hidden="true">🔊</span>
           <div class="vol-bar track-vol-bar" role="slider" aria-label="Громкость" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${volPct}" tabindex="0">
-            <div class="vol-fill" style="width:${volPct}%"></div>
+            <div class="vol-fill"></div>
           </div>
         </div>
-        <a class="download-card" href="${esc(t.src)}" download>⇩</a>
+        <a class="download-card" download>⇩</a>
       </div>`;
+
+    const fill = row.querySelector('.vol-fill');
+    if (fill) fill.style.width = volPct + '%';
+
+    const dl = row.querySelector('.download-card');
+    const safeSrc = safeMediaUrl(t.src, 'audio');
+    if (dl) {
+      if (safeSrc) {
+        dl.href = safeSrc;
+        dl.setAttribute('download', '');
+      } else {
+        dl.removeAttribute('href');
+        dl.hidden = true;
+      }
+    }
 
     container.appendChild(row);
 
     const probe = new Audio();
     probe.preload = 'metadata';
-    probe.src = t.src;
+    if (safeSrc) probe.src = safeSrc;
     probe.addEventListener('loadedmetadata', () => {
       t.duration = probe.duration;
       const el = row.querySelector(`[data-duration="${i}"]`);
@@ -378,10 +473,18 @@ function bindTrackVolume(bar) {
 }
 
 function absoluteUrl(path) {
+  const safe = safeMediaUrl(path, 'image') || safeMediaUrl(path, 'audio') || '';
+  if (!safe) {
+    try {
+      return new URL('./assets/cover2.jpg', location.href).href;
+    } catch {
+      return '';
+    }
+  }
   try {
-    return new URL(path, location.href).href;
+    return new URL(safe, location.href).href;
   } catch {
-    return path;
+    return '';
   }
 }
 
@@ -390,9 +493,9 @@ function updateMediaSession(t) {
   const cover = absoluteUrl(t.cover || './assets/cover2.jpg');
   try {
     navigator.mediaSession.metadata = new MediaMetadata({
-      title: t.title || 'Velvet Veil Vortex',
+      title: safeText(t.title || 'Velvet Veil Vortex', 120),
       artist: 'Velvet Veil Vortex',
-      album: t.albumTitle || 'Velvet Veil Vortex',
+      album: safeText(t.albumTitle || 'Velvet Veil Vortex', 120),
       artwork: [
         { src: cover, sizes: '512x512', type: 'image/jpeg' },
         { src: cover, sizes: '256x256', type: 'image/jpeg' },
@@ -463,14 +566,19 @@ function load(i, autoplay = false) {
 
   current = i;
   const t = tracks[i];
+  const mediaSrc = safeMediaUrl(t.src, 'audio');
+  if (!mediaSrc) {
+    console.warn('Blocked unsafe media URL');
+    return;
+  }
 
   audio.pause();
-  audio.src = t.src;
+  audio.src = mediaSrc;
   audio.load();
 
-  if (titleEl) titleEl.textContent = t.title;
+  if (titleEl) titleEl.textContent = safeText(t.title, 120);
   if (playerCover) {
-    playerCover.src = t.cover || './assets/cover2.jpg';
+    playerCover.src = safeMediaUrl(t.cover, 'image') || './assets/cover2.jpg';
     playerCover.onerror = () => {
       playerCover.onerror = null;
       playerCover.src = './assets/cover2.jpg';
@@ -478,7 +586,7 @@ function load(i, autoplay = false) {
   }
 
   if (playerDownload) {
-    playerDownload.href = t.src;
+    playerDownload.href = mediaSrc;
     playerDownload.hidden = false;
   }
 
@@ -886,17 +994,14 @@ if (location.hash && location.hash !== '#home') {
 fetch('./albums.json?' + Date.now(), { cache: 'no-store' })
   .then(r => {
     if (!r.ok) throw new Error('albums.json HTTP ' + r.status);
+    const ct = (r.headers.get('content-type') || '').toLowerCase();
+    if (ct && !ct.includes('json') && !ct.includes('text') && !ct.includes('javascript')) {
+      /* some static hosts omit content-type; allow empty */
+    }
     return r.json();
   })
   .then(data => {
-    albums = (Array.isArray(data) ? data : []).map(a => ({
-      id: a.id || (a.title || '').toLowerCase().replace(/\s+/g, '-'),
-      title: a.title || 'Без названия',
-      cover: a.cover || './assets/cover2.jpg',
-      year: a.year || '',
-      folder: a.folder || a.title || '',
-      tracks: Array.isArray(a.tracks) ? a.tracks : []
-    }));
+    albums = sanitizeAlbums(data);
     renderAlbums();
     updateListenButton();
   })
@@ -904,6 +1009,7 @@ fetch('./albums.json?' + Date.now(), { cache: 'no-store' })
     console.error('Ошибка загрузки albums.json:', err);
     empty.hidden = false;
     empty.textContent = 'Не удалось загрузить albums.json';
+    albums = [];
     renderAlbums();
     updateListenButton();
   });

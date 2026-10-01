@@ -860,6 +860,10 @@ body {
   font-size: 14px;
 }
 
+.empty-album {
+  padding: 16px 8px;
+}
+
 .site-footer {
   padding: 16px 0 140px;
   text-align: center;
