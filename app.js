@@ -29,7 +29,7 @@ let tracks = [];
 let current = -1;
 let activeAlbumIndex = -1;
 let shuffleOn = false;
-let repeatMode = 0;
+let repeatMode = false;
 let isSeeking = false;
 let seekPercent = 0;
 let scrollLock = false;
@@ -1002,10 +1002,15 @@ shuffleBtn.onclick = () => {
 };
 
 repeatBtn.onclick = () => {
-  repeatMode = (repeatMode + 1) % 3;
-  repeatBtn.classList.toggle('on', repeatMode > 0);
-  audio.loop = repeatMode === 2;
+  repeatMode = !repeatMode;
+  audio.loop = repeatMode;
+  repeatBtn.classList.toggle('on', repeatMode);
+  repeatBtn.setAttribute('aria-pressed', String(repeatMode));
+  repeatBtn.setAttribute('aria-label', repeatMode ? 'Повтор текущего трека включён' : 'Повтор текущего трека выключен');
+  repeatBtn.title = repeatMode ? 'Повтор: ВКЛ' : 'Повтор: ВЫКЛ';
 };
+repeatBtn.setAttribute('aria-pressed', 'false');
+repeatBtn.title = 'Повтор: ВЫКЛ';
 
 audio.addEventListener('play', () => {
   if (playBtn) playBtn.textContent = '❚❚';
@@ -1037,8 +1042,8 @@ audio.addEventListener('timeupdate', () => {
   }
 });
 audio.addEventListener('ended', () => {
-  if (repeatMode === 2) return;
-  if (repeatMode === 1 || shuffleOn || current < tracks.length - 1) {
+  if (repeatMode) return;
+  if (shuffleOn || current < tracks.length - 1) {
     const n = nextIndex();
     if (n >= 0) load(n, true);
   } else {
@@ -1207,13 +1212,13 @@ fetch('./albums.json?' + Date.now(), { cache: 'no-store' })
     resize();
     analyser.getByteFrequencyData(freq);
     analyser.getByteTimeDomainData(timeData);
-    const w = canvas.width, h = canvas.height, mid = h * .50;
+    const w = canvas.width, h = canvas.height, mid = h * .52;
     ctx.clearRect(0, 0, w, h);
     // Frequency energy adds punch on kick/snare transients; clamp to 20% cover height.
     let low = 0, lowN = Math.max(3, Math.floor(freq.length * .055));
     for (let i = 0; i < lowN; i++) low += freq[i];
     const bass = low / lowN / 255;
-    const cap = Math.min(h * 0.20, h * 0.48);
+    const cap = Math.min(h * 0.42, h * 0.62);
     const gradient = ctx.createLinearGradient(0, 0, w, 0);
     gradient.addColorStop(0, 'rgba(46,240,255,.78)');
     gradient.addColorStop(.48, 'rgba(182,151,255,.72)');
@@ -1229,7 +1234,7 @@ fetch('./albums.json?' + Date.now(), { cache: 'no-store' })
       const y = mid + Math.sin((x / points) * Math.PI * 2) * displacement;
       if (x === 0) ctx.moveTo(0, y); else ctx.lineTo((x / points) * w, y);
     }
-    ctx.lineWidth = Math.max(1.4, h * .085);
+    ctx.lineWidth = Math.max(2.2, h * .055);
     ctx.lineCap = 'round'; ctx.lineJoin = 'round';
     ctx.strokeStyle = gradient;
     ctx.shadowBlur = 8; ctx.shadowColor = 'rgba(46,240,255,.7)';
