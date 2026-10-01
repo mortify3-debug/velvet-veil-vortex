@@ -195,6 +195,13 @@ function sanitizeAlbums(data) {
         cover
       };
     }).filter(t => !!t.src);
+    // A track whose title matches its album is the album's opening track.
+    const normalizedAlbumTitle = safeText(a?.title || '', 120).trim().toLocaleLowerCase('ru');
+    safeTracks.sort((left, right) => {
+      const leftMatch = left.title.trim().toLocaleLowerCase('ru') === normalizedAlbumTitle;
+      const rightMatch = right.title.trim().toLocaleLowerCase('ru') === normalizedAlbumTitle;
+      return Number(rightMatch) - Number(leftMatch);
+    });
 
     const cover = safeMediaUrl(a?.cover, 'image') || './assets/cover2.jpg';
     if (a?.cover && cover === './assets/cover2.jpg' && safeMediaUrl(a.cover, 'image', { silent: true }) === '') {
@@ -925,6 +932,13 @@ if (listenBtn) {
     listenBtn.classList.remove('smoke-active');
     void listenBtn.offsetWidth;
     listenBtn.classList.add('smoke-active');
+    const heroSmoke = document.getElementById('hero-smoke');
+    if (heroSmoke) {
+      heroSmoke.classList.remove('active');
+      void heroSmoke.offsetWidth;
+      heroSmoke.classList.add('active');
+      window.setTimeout(() => heroSmoke.classList.remove('active'), 2600);
+    }
     window.setTimeout(() => listenBtn.classList.remove('smoke-active'), 1800);
     goToMusic();
     if (!albums.length) return;
@@ -1147,3 +1161,85 @@ fetch('./albums.json?' + Date.now(), { cache: 'no-store' })
     renderAlbums();
     updateListenButton();
   });
+
+// Real-time audio waveform: Web Audio analyser is connected only once.
+(() => {
+  const canvas = document.getElementById('audio-wave');
+  if (!canvas || !audio) return;
+  const ctx = canvas.getContext('2d');
+  let audioContext = null, analyser = null, sourceNode = null, rafId = 0;
+  let freq = null, timeData = null, lastWidth = 0, lastHeight = 0;
+  const resize = () => {
+    const rect = canvas.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const w = Math.round(rect.width * dpr), h = Math.round(rect.height * dpr);
+    if (w !== canvas.width || h !== canvas.height) {
+      canvas.width = w; canvas.height = h;
+      lastWidth = rect.width; lastHeight = rect.height;
+    }
+  };
+  const setup = async () => {
+    try {
+      if (!audioContext) {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        audioContext = new AudioCtx();
+        analyser = audioContext.createAnalyser();
+        analyser.fftSize = 2048;
+        analyser.smoothingTimeConstant = 0.68;
+        sourceNode = audioContext.createMediaElementSource(audio);
+        sourceNode.connect(analyser);
+        analyser.connect(audioContext.destination);
+        freq = new Uint8Array(analyser.frequencyBinCount);
+        timeData = new Uint8Array(analyser.fftSize);
+      }
+      if (audioContext.state === 'suspended') await audioContext.resume();
+      if (!rafId) draw();
+    } catch (err) { console.warn('Audio visualizer unavailable:', err); }
+  };
+  const draw = () => {
+    rafId = requestAnimationFrame(draw);
+    if (!analyser || audio.paused) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      return;
+    }
+    resize();
+    analyser.getByteFrequencyData(freq);
+    analyser.getByteTimeDomainData(timeData);
+    const w = canvas.width, h = canvas.height, mid = h * .50;
+    ctx.clearRect(0, 0, w, h);
+    // Frequency energy adds punch on kick/snare transients; clamp to 20% cover height.
+    let low = 0, lowN = Math.max(3, Math.floor(freq.length * .055));
+    for (let i = 0; i < lowN; i++) low += freq[i];
+    const bass = low / lowN / 255;
+    const cap = Math.min(h * 0.20, h * 0.48);
+    const gradient = ctx.createLinearGradient(0, 0, w, 0);
+    gradient.addColorStop(0, 'rgba(46,240,255,.78)');
+    gradient.addColorStop(.48, 'rgba(182,151,255,.72)');
+    gradient.addColorStop(1, 'rgba(255,45,145,.8)');
+    ctx.beginPath();
+    const points = Math.max(40, Math.floor(w / 3));
+    for (let x = 0; x <= points; x++) {
+      const bin = Math.min(freq.length - 1, Math.floor((x / points) * freq.length * .72));
+      const amp = freq[bin] / 255;
+      const sample = timeData[Math.floor((x / points) * (timeData.length - 1))] / 128 - 1;
+      const kick = bass * (x % 2 ? 1 : .78);
+      const displacement = Math.min(cap, cap * (.12 + amp * .62 + Math.abs(sample) * .18 + kick * .55));
+      const y = mid + Math.sin((x / points) * Math.PI * 2) * displacement;
+      if (x === 0) ctx.moveTo(0, y); else ctx.lineTo((x / points) * w, y);
+    }
+    ctx.lineWidth = Math.max(1.4, h * .085);
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.strokeStyle = gradient;
+    ctx.shadowBlur = 8; ctx.shadowColor = 'rgba(46,240,255,.7)';
+    ctx.stroke(); ctx.shadowBlur = 0;
+    ctx.globalAlpha = .15;
+    ctx.lineTo(w, h); ctx.lineTo(0, h); ctx.closePath();
+    ctx.fillStyle = gradient; ctx.fill(); ctx.globalAlpha = 1;
+  };
+  audio.addEventListener('play', setup);
+  audio.addEventListener('pause', () => { if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height); });
+  window.addEventListener('resize', resize, { passive: true });
+})();
+

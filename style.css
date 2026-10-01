@@ -1524,3 +1524,24 @@ audio { display: none; }
   .listen-btn.smoke-active .listen-smoke::before,
   .listen-btn.smoke-active .listen-smoke::after { animation: none; opacity: .75; }
 }
+
+/* Neon edge stays fixed; the animated highlight travels along the perimeter. */
+@property --edge-angle { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+.listen-btn { border: 0; background: linear-gradient(110deg,rgba(255,45,145,.23),rgba(46,240,255,.22) 55%,rgba(255,45,145,.25)),rgba(7,8,18,.97); }
+.listen-neon { padding: 5px; inset: 0; transform: none !important; animation: none !important; opacity: .78; background: conic-gradient(from var(--edge-angle),transparent 0deg 285deg,#ff4fa9 306deg,#fff 319deg,#42f5ff 334deg,#ff4fa9 347deg,transparent 360deg); }
+.listen-btn:hover .listen-neon,.listen-btn:focus-visible .listen-neon { opacity: 1; animation: edge-travel 1.5s linear infinite !important; }
+@keyframes edge-travel { to { --edge-angle: 360deg; } }
+.listen-btn::before { background:linear-gradient(105deg,rgba(255,45,145,.17),rgba(46,240,255,.18) 52%,rgba(255,45,145,.2)); }
+/* Smoke rises from the lower edge of the first/hero cover, not only from the button. */
+.hero-smoke { position:absolute; z-index:3; left:10%; right:10%; bottom:0; height:38%; pointer-events:none; opacity:0; overflow:hidden; }
+.hero-smoke i { position:absolute; bottom:-20%; left:var(--sx,10%); width:34%; height:95%; border-radius:50%; opacity:0; filter:blur(24px); background:radial-gradient(ellipse,rgba(46,240,255,.54),rgba(46,240,255,.12) 42%,transparent 72%); transform:translate3d(0,35%,0) scale(.65); }
+.hero-smoke i:nth-child(2n) { background:radial-gradient(ellipse,rgba(255,45,145,.55),rgba(255,45,145,.13) 42%,transparent 72%); }
+.hero-smoke i:nth-child(1){left:2%}.hero-smoke i:nth-child(2){left:17%}.hero-smoke i:nth-child(3){left:33%}.hero-smoke i:nth-child(4){left:49%}.hero-smoke i:nth-child(5){left:65%}.hero-smoke i:nth-child(6){left:79%}
+.hero-smoke.active {opacity:1}
+.hero-smoke.active i {animation: hero-smoke-rise 2.5s ease-out both}
+.hero-smoke.active i:nth-child(2){animation-delay:.12s}.hero-smoke.active i:nth-child(3){animation-delay:.24s}.hero-smoke.active i:nth-child(4){animation-delay:.08s}.hero-smoke.active i:nth-child(5){animation-delay:.2s}.hero-smoke.active i:nth-child(6){animation-delay:.32s}
+@keyframes hero-smoke-rise {0%{opacity:0;transform:translate3d(0,30%,0) scale(.55)}22%{opacity:.95}100%{opacity:0;transform:translate3d(0,-115%,0) scale(1.75)}}
+.player-art { position:relative; overflow:hidden; isolation:isolate; }
+.player-art img { position:relative; z-index:0; }
+.audio-wave { position:absolute; z-index:1; left:0; bottom:0; width:100%; height:20%; pointer-events:none; opacity:.72; }
+@media(prefers-reduced-motion:reduce){.listen-btn:hover .listen-neon,.listen-btn:focus-visible .listen-neon{animation:none!important}.hero-smoke.active i{animation:none;opacity:.35}}
