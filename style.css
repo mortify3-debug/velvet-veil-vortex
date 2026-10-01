@@ -1547,7 +1547,7 @@ audio { display: none; }
 /* Audio visualizer: one neon line, no frame/block, behind the fixed player. */
 .track-visualizer {
   position: fixed;
-  z-index: 39;
+  z-index: 41;
   left: 0;
   bottom: 42px;
   width: 220px;

@@ -1218,21 +1218,11 @@ fetch('./albums.json?' + Date.now(), { cache: 'no-store' })
     visualizer.style.visibility = 'visible';
     visualizer.style.opacity = '1';
 
-    // Put the visualizer baseline exactly on the player's seek/progress line.
-    // The visualizer stays behind the player, while the transparent player
-    // lets the neon line remain visible at the same vertical level.
-    const seekTrack = document.querySelector('.seek-track');
-    if (seekTrack) {
-      const sr = seekTrack.getBoundingClientRect();
-      if (sr.width > 0 && sr.height > 0) {
-        const seekCenterY = sr.top + sr.height / 2;
-        visualizer.style.bottom = `${Math.max(0, window.innerHeight - seekCenterY)}px`;
-      } else {
-        visualizer.style.bottom = '42px';
-      }
-    } else if (player) {
+    // Place the neon waveform just above the player's top edge, like the reference.
+    // Its baseline follows the player responsively while the existing amplitude is preserved.
+    if (player) {
       const pr = player.getBoundingClientRect();
-      visualizer.style.bottom = `${Math.max(8, window.innerHeight - pr.bottom + 22)}px`;
+      visualizer.style.bottom = `${Math.max(0, window.innerHeight - pr.top + 2)}px`;
     } else {
       const coverH = cover?.getBoundingClientRect().height || 220;
       visualizer.style.bottom = `${Math.max(18, coverH * 0.15)}px`;
