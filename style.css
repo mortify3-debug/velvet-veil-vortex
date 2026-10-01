@@ -230,8 +230,8 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 16px;
-  padding: 14px 28px 14px 16px;
-  border: none;
+  padding: 19px 36px 19px 22px;
+  border: 1px solid rgba(46, 240, 255, 0.72);
   cursor: pointer;
   position: relative;
   color: #fff;
@@ -246,8 +246,47 @@ body {
   transition: transform 0.2s, filter 0.2s, box-shadow 0.2s;
   -webkit-tap-highlight-color: transparent;
   overflow: hidden;
-  max-width: min(420px, 92vw);
+  isolation: isolate;
+  min-height: 96px;
+  max-width: min(480px, 94vw);
 }
+
+.listen-neon {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  padding: 2px;
+  pointer-events: none;
+  opacity: 0;
+  background: conic-gradient(from 0deg, transparent 0 66%, #2ef0ff 73%, #fff 77%, #ff2d91 82%, transparent 89% 100%);
+  clip-path: polygon(0 8%, 100% 0, 98% 100%, 2% 92%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  transition: opacity .25s ease;
+  animation: neon-orbit 2.2s linear infinite;
+}
+@keyframes neon-orbit { to { transform: rotate(360deg); } }
+.listen-btn:hover .listen-neon, .listen-btn:focus-visible .listen-neon { opacity: 1; }
+.listen-smoke {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+}
+.listen-smoke::before, .listen-smoke::after {
+  content: '';
+  position: absolute;
+  left: 20%; right: 12%; bottom: -18px; height: 80%;
+  background: radial-gradient(ellipse at 25% 80%, rgba(46,240,255,.32), transparent 48%), radial-gradient(ellipse at 62% 85%, rgba(255,45,145,.3), transparent 52%), radial-gradient(ellipse at 80% 65%, rgba(220,225,255,.22), transparent 45%);
+  filter: blur(12px);
+  transform: translateY(12px) scale(.7);
+}
+.listen-btn.smoke-active .listen-smoke { opacity: 1; }
+.listen-btn.smoke-active .listen-smoke::before { animation: smoke-rise 1.35s ease-out both; }
+.listen-btn.smoke-active .listen-smoke::after { animation: smoke-rise 1.6s .12s ease-out both; }
+@keyframes smoke-rise { 0% { opacity: 0; transform: translateY(16px) scale(.65); } 25% { opacity: .95; } 100% { opacity: 0; transform: translateY(-42px) scale(1.35); } }
 
 .listen-btn::before {
   content: '';
@@ -334,12 +373,12 @@ body {
 }
 
 .listen-btn:hover {
-  transform: translateY(-2px) scale(1.02);
+  transform: translateY(-3px) scale(1.045);
   filter: brightness(1.08);
   box-shadow:
     0 0 0 1px rgba(255, 45, 145, 0.7),
     0 12px 40px rgba(0, 0, 0, 0.55),
-    0 0 48px rgba(255, 45, 145, 0.4);
+    0 0 48px rgba(255, 45, 145, 0.4), 0 0 22px rgba(46, 240, 255, 0.42);
 }
 
 .listen-btn:hover .listen-arrow {
@@ -347,6 +386,8 @@ body {
 }
 
 .listen-btn:active { transform: scale(0.98); }
+.listen-btn:focus-visible { outline: 2px solid #2ef0ff; outline-offset: 5px; }
+@media (prefers-reduced-motion: reduce) { .listen-neon, .listen-btn.smoke-active .listen-smoke::before, .listen-btn.smoke-active .listen-smoke::after { animation: none; } }
 
 .scroll-hint {
   position: absolute;

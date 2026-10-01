@@ -922,6 +922,10 @@ function updateListenButton() {
 
 if (listenBtn) {
   listenBtn.addEventListener('click', () => {
+    listenBtn.classList.remove('smoke-active');
+    void listenBtn.offsetWidth;
+    listenBtn.classList.add('smoke-active');
+    window.setTimeout(() => listenBtn.classList.remove('smoke-active'), 1800);
     goToMusic();
     if (!albums.length) return;
     const info = getNewestTrackInfo();
