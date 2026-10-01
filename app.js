@@ -54,44 +54,75 @@ const safeText = (s, max = 200) =>
  * Only allow same-origin relative media under ./music or ./assets.
  * Blocks javascript:, data:, //evil, path traversal, external hosts.
  */
+
+/** True only for path-segment ".." (not filenames like "Во сне я...mp3") */
+function hasPathTraversal(path) {
+  return String(path || '')
+    .replace(/\\/g, '/')
+    .split('/')
+    .some(seg => {
+      if (!seg || seg === '.') return false;
+      try {
+        return decodeURIComponent(seg) === '..';
+      } catch {
+        return seg === '..';
+      }
+    });
+}
+
+/**
+ * Same-origin media under music/ or assets/ only.
+ * Allows ellipsis in names ("Во сне я...mp3"); blocks real "../" traversal.
+ */
 function safeMediaUrl(raw, kind = 'any') {
   if (raw == null) return '';
   let s = String(raw).trim().replace(/\\/g, '/');
   if (!s || /[\u0000-\u001F\u007F]/.test(s)) return '';
-  // reject schemes and protocol-relative URLs
-  if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(s) || s.startsWith('//')) return '';
-  if (s.includes('..')) return '';
-  if (!s.startsWith('./') && !s.startsWith('/')) s = './' + s;
 
-  let resolved;
+  // Absolute / protocol-relative → must stay on this origin, then treat as path
+  if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(s) || s.startsWith('//')) {
+    let abs;
+    try {
+      abs = new URL(s, location.href);
+    } catch {
+      return '';
+    }
+    if (abs.origin !== location.origin) return '';
+    if (abs.username || abs.password) return '';
+    s = abs.pathname;
+  }
+
+  // Normalize to ./relative
+  s = s.replace(/^\/+/, '');
+  if (s.startsWith('./')) s = s.slice(2);
+  if (hasPathTraversal(s)) return '';
+
+  let decoded;
   try {
-    resolved = new URL(s, location.href);
+    decoded = decodeURIComponent(s);
   } catch {
     return '';
   }
-  if (resolved.origin !== location.origin) return '';
-  if (resolved.username || resolved.password) return '';
+  if (hasPathTraversal(decoded)) return '';
 
-  // Decode once for checks; keep original relative form if safe
-  let path;
-  try {
-    path = decodeURIComponent(resolved.pathname).replace(/^\/+/, '');
-  } catch {
-    return '';
-  }
-  if (path.includes('..')) return '';
-  if (!(path.startsWith('music/') || path.startsWith('assets/'))) return '';
+  // Accept music/… or assets/… (also after optional site base segments)
+  const relMatch = decoded.match(/(?:^|\/)(music|assets)\/(.+)$/i);
+  if (!relMatch) return '';
+  const root = relMatch[1].toLowerCase();
+  const rest = relMatch[2];
+  if (hasPathTraversal(rest)) return '';
 
-  const lower = path.toLowerCase();
+  const lower = (root + '/' + rest).toLowerCase();
   const audioOk = /\.(mp3|m4a|ogg|wav)$/.test(lower);
   const imageOk = /\.(png|jpe?g|webp|gif)$/.test(lower);
   if (kind === 'audio' && !audioOk) return '';
   if (kind === 'image' && !imageOk) return '';
   if (kind === 'any' && !audioOk && !imageOk) return '';
 
-  // Return path-relative URL (preserve encoding from source if already encoded)
-  const rel = './' + resolved.pathname.replace(/^\/+/, '');
-  return rel;
+  // Rebuild relative URL; keep original percent-encoding for the matched suffix
+  const encIdx = s.toLowerCase().search(/(?:^|\/)(music|assets)\//i);
+  const suffix = encIdx >= 0 ? s.slice(encIdx).replace(/^\//, '') : root + '/' + rest;
+  return './' + suffix.replace(/^\.\//, '');
 }
 
 function sanitizeAlbums(data) {
