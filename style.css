@@ -456,51 +456,8 @@ body {
   text-transform: uppercase;
 }
 
-.music-visualizer {
-  position: relative;
-  width: 100%;
-  height: 112px;
-  margin: 0 0 14px;
-  padding: 0;
-  overflow: hidden;
-  background: #070910;
-  border: 1px solid rgba(46, 240, 255, 0.18);
-  border-radius: 14px;
-  box-shadow: inset 0 0 28px rgba(0,0,0,.72), 0 0 24px rgba(46,240,255,.08);
-  isolation: isolate;
-}
-
-.music-visualizer::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(180deg, rgba(5,8,14,.96), rgba(7,7,12,.98));
-  z-index: 0;
-}
-
-.music-visualizer::after {
-  content: '';
-  position: absolute;
-  left: 0; right: 0; bottom: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(46,240,255,.6), rgba(255,45,145,.75), transparent);
-  box-shadow: 0 0 12px rgba(255,45,145,.45);
-  z-index: 2;
-}
-
-.music-visualizer .audio-wave {
-  position: absolute;
-  z-index: 1;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  display: block;
-  pointer-events: none;
-  opacity: 1;
-}
-
 .music-panel {
-  background: rgba(8, 8, 14, 0.28);
+  background: rgba(8, 8, 14, 0.45);
   border: 1px solid rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
@@ -552,7 +509,7 @@ body {
 }
 
 .album-card {
-  background: rgba(16, 16, 24, 0.42);
+  background: rgba(16, 16, 24, 0.6);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 14px;
   overflow: hidden;
@@ -570,7 +527,7 @@ body {
 .album-card.is-expanded {
   border-color: rgba(255, 45, 145, 0.55);
   box-shadow: 0 0 28px rgba(255, 45, 145, 0.2);
-  background: rgba(16, 16, 24, 0.56);
+  background: rgba(16, 16, 24, 0.78);
 }
 
 .album-card-row {
@@ -771,7 +728,6 @@ body {
 }
 
 .track-panel {
-  position: relative;
   animation: fadeInTracks 0.25s ease;
 }
 
@@ -801,7 +757,7 @@ body {
   align-items: center;
   gap: 14px;
   padding: 14px 16px;
-  background: rgba(0, 0, 0, 0.20);
+  background: rgba(0, 0, 0, 0.25);
   border: 1px solid transparent;
   border-radius: 12px;
   cursor: pointer;
@@ -983,7 +939,7 @@ body {
   flex-direction: column;
   gap: 10px;
   padding: 12px 16px 14px;
-  background: rgba(10, 10, 16, 0.68);
+  background: var(--glass);
   backdrop-filter: blur(22px);
   -webkit-backdrop-filter: blur(22px);
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -1587,92 +1543,44 @@ audio { display: none; }
 @keyframes hero-smoke-rise {0%{opacity:0;transform:translate3d(0,30%,0) scale(.55)}22%{opacity:.95}100%{opacity:0;transform:translate3d(0,-115%,0) scale(1.75)}}
 .player-art { position:relative; overflow:hidden; isolation:isolate; }
 .player-art img { position:relative; z-index:0; }
-@media(prefers-reduced-motion:reduce){.listen-btn:hover .listen-neon,.listen-btn:focus-visible .listen-neon{animation:none!important}.hero-smoke.active i{animation:none;opacity:.35}}
 
-/* Hand-bent neon tube frame: segmented lamps follow the irregular button contour and spill onto the hero cover. */
-.listen-btn {
-  overflow: visible;
+/* Full-width waveform: deliberately separated from the tiny player thumbnail. */
+.track-visualizer {
+  position: relative;
+  width: 100%;
+  height: 92px;
+  min-height: 92px;
+  margin: 12px 0 14px;
+  overflow: hidden;
+  border-radius: 14px;
+  background: rgba(4, 6, 14, .96);
+  border: 1px solid rgba(46, 240, 255, .26);
+  box-shadow: inset 0 0 24px rgba(46, 240, 255, .08), 0 0 18px rgba(255,45,145,.06);
   isolation: isolate;
-  z-index: 6;
 }
-.listen-neon {
-  inset: -14px -18px;
-  padding: 8px;
-  clip-path: polygon(2% 16%, 12% 5%, 34% 9%, 58% 2%, 88% 8%, 98% 20%, 94% 45%, 100% 74%, 87% 95%, 61% 91%, 36% 99%, 9% 91%, 1% 72%, 5% 45%);
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  mask-composite: exclude;
-  background: repeating-conic-gradient(from var(--edge-angle), transparent 0deg 5deg, rgba(255,255,255,.98) 5deg 7deg, #ff4fa9 7deg 12deg, transparent 12deg 20deg);
-  filter: drop-shadow(0 0 4px rgba(255,45,145,.9)) drop-shadow(0 0 9px rgba(46,240,255,.55));
-  opacity: .82;
-  animation: edge-travel 2.1s linear infinite;
-}
-.listen-neon::before {
+.track-visualizer::before {
   content: '';
   position: absolute;
-  inset: 5px;
-  padding: 4px;
-  clip-path: polygon(3% 16%, 13% 7%, 34% 11%, 58% 4%, 87% 10%, 96% 21%, 92% 45%, 98% 73%, 85% 93%, 61% 89%, 36% 97%, 10% 89%, 3% 71%, 7% 45%);
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  mask-composite: exclude;
-  background: repeating-conic-gradient(from calc(var(--edge-angle) + 18deg), transparent 0deg 7deg, rgba(46,240,255,.9) 7deg 9deg, #fff 9deg 11deg, transparent 11deg 20deg);
-  filter: blur(.25px);
+  left: 0; right: 0; top: 50%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.16), transparent);
+  z-index: 0;
 }
-.listen-btn::before {
-  z-index: -1;
-}
-.listen-btn::after {
-  z-index: -1;
-}
-.listen-btn:hover .listen-neon,
-.listen-btn:focus-visible .listen-neon {
+.audio-wave {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 92px;
+  pointer-events: none;
   opacity: 1;
 }
+.track-visualizer:not(.is-active) { opacity: .92; }
+@media(prefers-reduced-motion:reduce){.listen-btn:hover .listen-neon,.listen-btn:focus-visible .listen-neon{animation:none!important}.hero-smoke.active i{animation:none;opacity:.35}}
 
-/* The moving highlight crosses the button and a short section of the first cover. */
-.listen-btn .listen-neon::after {
-  content: '';
-  position: absolute;
-  left: -22vw;
-  top: 18%;
-  width: 34vw;
-  max-width: 420px;
-  height: 3px;
-  background: linear-gradient(90deg, transparent, #2ef0ff 35%, #fff 50%, #ff2d91 65%, transparent);
-  box-shadow: 0 0 8px #2ef0ff, 0 0 18px #ff2d91;
-  transform: rotate(-7deg);
-  opacity: .9;
-  animation: neon-sweep 2.1s linear infinite;
-}
-@keyframes neon-sweep {
-  from { transform: translateX(0) rotate(-7deg); }
-  to { transform: translateX(calc(100vw + 30vw)) rotate(-7deg); }
-}
-
-/* Album play/pause icons stay visible but translucent. */
-.album-card-play,
-.card-play {
-  opacity: .58;
-  background: rgba(255,45,145,.52);
-  color: rgba(255,255,255,.9);
-}
-.album-card:hover .album-card-play,
-.album-card:focus-within .album-card-play,
-.album-card.is-expanded .album-card-play { opacity: .68; }
-.album-card-play.is-playing,
-.card-play.is-playing { opacity: .78; }
-
-/* Repeat has only two states: OFF / ON. */
-#repeat.on {
-  color: var(--pink);
-  background: rgba(255,45,145,.12);
-  box-shadow: 0 0 12px rgba(255,45,145,.2);
-}
-
-@media (max-width: 600px) {
-  .music-visualizer { height: 88px; margin-bottom: 10px; }
-  .listen-neon { inset: -10px -12px; }
+@media (max-width: 700px) {
+  .track-visualizer { height: 76px; min-height: 76px; margin: 10px 0 12px; }
+  .audio-wave { min-height: 76px; }
 }
