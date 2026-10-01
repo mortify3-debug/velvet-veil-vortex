@@ -226,6 +226,53 @@ body {
   filter: drop-shadow(0 0 12px rgba(255, 45, 145, 0.55));
 }
 
+/* White neon script slogans */
+.slogan-neon {
+  font-family: 'Marck Script', cursive, Georgia, serif;
+  font-size: clamp(26px, 5.2vw, 44px);
+  font-weight: 400;
+  font-style: normal;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  color: #f8fbff;
+  background: none;
+  -webkit-background-clip: unset;
+  background-clip: unset;
+  -webkit-text-fill-color: #f8fbff;
+  text-shadow:
+    0 0 4px #fff,
+    0 0 10px #fff,
+    0 0 18px rgba(220, 235, 255, 0.95),
+    0 0 32px rgba(180, 210, 255, 0.7),
+    0 0 48px rgba(140, 190, 255, 0.45),
+    0 2px 6px rgba(0, 0, 0, 0.45);
+  filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.55));
+}
+
+.slogan-neon-bright {
+  font-family: 'Marck Script', cursive, Georgia, serif;
+  font-size: clamp(18px, 3.4vw, 30px);
+  font-weight: 400;
+  font-style: normal;
+  letter-spacing: 0.03em;
+  text-transform: none;
+  color: #ffffff;
+  background: none;
+  -webkit-background-clip: unset;
+  background-clip: unset;
+  -webkit-text-fill-color: #ffffff;
+  text-shadow:
+    0 0 3px #fff,
+    0 0 8px #fff,
+    0 0 14px #fff,
+    0 0 22px rgba(255, 255, 255, 0.95),
+    0 0 36px rgba(230, 245, 255, 0.85),
+    0 0 56px rgba(200, 230, 255, 0.65),
+    0 0 80px rgba(160, 210, 255, 0.4),
+    0 2px 8px rgba(0, 0, 0, 0.5);
+  filter: drop-shadow(0 0 14px rgba(255, 255, 255, 0.75));
+}
+
 .listen-btn {
   display: inline-flex;
   align-items: center;
@@ -454,6 +501,15 @@ body {
   letter-spacing: 0.3em;
   color: rgba(255, 255, 255, 0.65);
   text-transform: uppercase;
+}
+
+.slogan-en.slogan-neon-bright {
+  margin: 10px 0 0;
+  font-size: clamp(18px, 3.4vw, 30px);
+  font-weight: 400;
+  letter-spacing: 0.03em;
+  text-transform: none;
+  color: #ffffff;
 }
 
 .music-panel {
@@ -1223,6 +1279,15 @@ audio { display: none; }
   .slogan {
     font-size: clamp(18px, 5.5vw, 24px);
     margin: 12px 0 22px;
+  }
+
+  .slogan-neon {
+    font-size: clamp(22px, 6vw, 32px);
+    margin: 12px 0 22px;
+  }
+
+  .slogan-en.slogan-neon-bright {
+    font-size: clamp(16px, 4.5vw, 24px);
   }
 
   .listen-btn {
