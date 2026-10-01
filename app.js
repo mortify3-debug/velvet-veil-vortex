@@ -835,11 +835,7 @@ function goToMusic() {
   setNav('music');
 }
 
-/* Cover step transition state (wheel notches) */
-let coverStep = 0;
-let coverStepDir = 0;
-let coverFromIdx = 0;
-
+/* Smooth cover-to-cover scrolling */
 if (snapMain) {
   const io = new IntersectionObserver(
     entries => {
@@ -851,109 +847,33 @@ if (snapMain) {
   );
   document.querySelectorAll('.cover').forEach(s => io.observe(s));
 
-  /*
-   * 1st wheel notch → show ~20% of next cover
-   * 2nd notch → ~40%
-   * 3rd notch → full transition
-   * Same in reverse. Each step is eased.
-   */
   let wheelGate = false;
-
   const getSections = () => [...document.querySelectorAll('.cover')];
-
   const nearestSectionIndex = () => {
     const sections = getSections();
     const y = snapMain.scrollTop;
-    let idx = 0;
-    let best = Infinity;
-    sections.forEach((s, i) => {
-      const d = Math.abs(s.offsetTop - y);
-      if (d < best) {
-        best = d;
-        idx = i;
-      }
-    });
-    return idx;
+    return sections.reduce((bestIdx, section, i) =>
+      Math.abs(section.offsetTop - y) < Math.abs(sections[bestIdx].offsetTop - y) ? i : bestIdx, 0);
   };
 
-  snapMain.addEventListener(
-    'wheel',
-    e => {
-      const stage = e.target.closest('.music-stage');
-      if (stage && stage.scrollHeight > stage.clientHeight + 4) {
-        const atTop = stage.scrollTop <= 0 && e.deltaY < 0;
-        const atBottom =
-          stage.scrollTop + stage.clientHeight >= stage.scrollHeight - 2 && e.deltaY > 0;
-        if (!atTop && !atBottom) return;
-        if (atBottom && e.deltaY > 0) return;
-      }
-
-      e.preventDefault();
-      if (scrollLock || wheelGate) return;
-
-      const dir = e.deltaY > 0 ? 1 : e.deltaY < 0 ? -1 : 0;
-      if (!dir) return;
-
-      const sections = getSections();
-      if (sections.length < 2) return;
-
-      /* Reverse mid-transition → step back toward the other cover */
-      if (coverStep > 0 && dir !== coverStepDir) {
-        coverStep -= 1;
-        if (coverStep <= 0) {
-          coverStep = 0;
-          coverStepDir = 0;
-          smoothScrollToY(sections[coverFromIdx].offsetTop, 400);
-          wheelGate = true;
-          setTimeout(() => { wheelGate = false; }, 80);
-          return;
-        }
-        const from = sections[coverFromIdx];
-        const to = sections[coverFromIdx + coverStepDir];
-        if (from && to) {
-          const fraction = coverStep * 0.2;
-          smoothScrollToY(from.offsetTop + (to.offsetTop - from.offsetTop) * fraction, 400);
-        }
-        wheelGate = true;
-        setTimeout(() => { wheelGate = false; }, 80);
-        return;
-      }
-
-      if (coverStep === 0) {
-        coverFromIdx = nearestSectionIndex();
-        const targetIdx = coverFromIdx + dir;
-        if (targetIdx < 0 || targetIdx >= sections.length) return;
-        coverStepDir = dir;
-        coverStep = 1;
-      } else {
-        coverStep += 1;
-      }
-
-      const from = sections[coverFromIdx];
-      const to = sections[coverFromIdx + coverStepDir];
-      if (!from || !to) {
-        coverStep = 0;
-        coverStepDir = 0;
-        return;
-      }
-
-      wheelGate = true;
-      setTimeout(() => { wheelGate = false; }, 80);
-
-      if (coverStep >= 3) {
-        smoothScrollToY(to.offsetTop, 620);
-        coverFromIdx = coverFromIdx + coverStepDir;
-        coverStep = 0;
-        coverStepDir = 0;
-        return;
-      }
-
-      const fraction = coverStep * 0.2;
-      const targetY = from.offsetTop + (to.offsetTop - from.offsetTop) * fraction;
-      smoothScrollToY(targetY, 400);
-    },
-    { passive: false }
-  );
+  /* One deliberate, eased scroll between covers; no intermediate wheel steps. */
+  snapMain.addEventListener('wheel', e => {
+    const stage = e.target.closest('.music-stage');
+    if (stage && stage.scrollHeight > stage.clientHeight + 4) {
+      const atTop = stage.scrollTop <= 0 && e.deltaY < 0;
+      const atBottom = stage.scrollTop + stage.clientHeight >= stage.scrollHeight - 2 && e.deltaY > 0;
+      if (!atTop && !atBottom) return;
+      if (atBottom && e.deltaY > 0) return;
+    }
+    e.preventDefault();
+    if (scrollLock || wheelGate || !e.deltaY) return;
+    const sections = getSections();
+    const targetIdx = nearestSectionIndex() + (e.deltaY > 0 ? 1 : -1);
+    if (targetIdx < 0 || targetIdx >= sections.length) return;
+    wheelGate = true;
+    smoothScrollToY(sections[targetIdx].offsetTop, 950);
+    setTimeout(() => { wheelGate = false; }, 980);
+  }, { passive: false });
 }
 
 function getNewestTrackInfo() {

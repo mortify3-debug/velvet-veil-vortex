@@ -95,8 +95,8 @@ body {
   overflow-y: auto;
   overflow-x: hidden;
   /* proximity + JS easing = smoother, wheel-intensity-aware transitions */
-  scroll-snap-type: y proximity;
-  scroll-behavior: auto;
+  scroll-snap-type: y mandatory;
+  scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-y: contain;
   scrollbar-width: none;
@@ -130,6 +130,7 @@ body {
   object-fit: cover;
   object-position: center center;
   display: block;
+  will-change: transform;
   min-height: 100%;
   min-width: 100%;
   z-index: 0;
@@ -1413,7 +1414,7 @@ audio { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  html { scroll-behavior: auto; }
+  html { scroll-behavior: smooth; }
   .scroll-hint { animation: none; }
 }
 
