@@ -94,8 +94,9 @@ body {
   height: 100dvh;
   overflow-y: auto;
   overflow-x: hidden;
-  scroll-snap-type: y mandatory;
-  scroll-behavior: smooth;
+  /* proximity + JS easing = smoother, wheel-intensity-aware transitions */
+  scroll-snap-type: y proximity;
+  scroll-behavior: auto;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-y: contain;
   scrollbar-width: none;
@@ -116,7 +117,7 @@ body {
   height: 100svh;
   height: 100dvh;
   scroll-snap-align: start;
-  scroll-snap-stop: always;
+  scroll-snap-stop: normal;
   position: relative;
   flex-shrink: 0;
 }

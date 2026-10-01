@@ -50,10 +50,36 @@ const safeText = (s, max = 200) =>
     .replace(/[\u0000-\u001F\u007F]/g, '')
     .slice(0, max);
 
-/**
- * Only allow same-origin relative media under ./music or ./assets.
- * Blocks javascript:, data:, //evil, path traversal, external hosts.
- */
+/** Security block logger — visible in DevTools console */
+const securityLog = {
+  enabled: true,
+  blocks: [],
+  warn(reason, detail = {}) {
+    if (!this.enabled) return;
+    const entry = {
+      time: new Date().toISOString(),
+      reason,
+      ...detail
+    };
+    this.blocks.push(entry);
+    if (this.blocks.length > 200) this.blocks.shift();
+    const preview =
+      detail.url != null
+        ? String(detail.url).slice(0, 120)
+        : detail.title != null
+          ? String(detail.title).slice(0, 80)
+          : '';
+    console.warn('[VVV security] blocked:', reason, preview || '', detail);
+  },
+  summary() {
+    console.info('[VVV security] total blocks:', this.blocks.length, this.blocks);
+    return this.blocks;
+  }
+};
+
+try {
+  window.VVVSecurityLog = securityLog;
+} catch (_) {}
 
 /** True only for path-segment ".." (not filenames like "Во сне я...mp3") */
 function hasPathTraversal(path) {
@@ -74,10 +100,19 @@ function hasPathTraversal(path) {
  * Same-origin media under music/ or assets/ only.
  * Allows ellipsis in names ("Во сне я...mp3"); blocks real "../" traversal.
  */
-function safeMediaUrl(raw, kind = 'any') {
+function safeMediaUrl(raw, kind = 'any', opts = {}) {
+  const silent = !!opts.silent;
+  const block = (reason) => {
+    if (!silent && raw != null && String(raw).trim() !== '') {
+      securityLog.warn(reason, { kind, url: String(raw).slice(0, 300) });
+    }
+    return '';
+  };
+
   if (raw == null) return '';
   let s = String(raw).trim().replace(/\\/g, '/');
-  if (!s || /[\u0000-\u001F\u007F]/.test(s)) return '';
+  if (!s) return '';
+  if (/[\u0000-\u001F\u007F]/.test(s)) return block('control-chars');
 
   // Absolute / protocol-relative → must stay on this origin, then treat as path
   if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(s) || s.startsWith('//')) {
@@ -85,39 +120,39 @@ function safeMediaUrl(raw, kind = 'any') {
     try {
       abs = new URL(s, location.href);
     } catch {
-      return '';
+      return block('invalid-absolute-url');
     }
-    if (abs.origin !== location.origin) return '';
-    if (abs.username || abs.password) return '';
+    if (abs.origin !== location.origin) return block('external-origin');
+    if (abs.username || abs.password) return block('url-credentials');
     s = abs.pathname;
   }
 
-  // Normalize to ./relative
+  // Normalize to relative
   s = s.replace(/^\/+/, '');
   if (s.startsWith('./')) s = s.slice(2);
-  if (hasPathTraversal(s)) return '';
+  if (hasPathTraversal(s)) return block('path-traversal');
 
   let decoded;
   try {
     decoded = decodeURIComponent(s);
   } catch {
-    return '';
+    return block('bad-encoding');
   }
-  if (hasPathTraversal(decoded)) return '';
+  if (hasPathTraversal(decoded)) return block('path-traversal-decoded');
 
   // Accept music/… or assets/… (also after optional site base segments)
   const relMatch = decoded.match(/(?:^|\/)(music|assets)\/(.+)$/i);
-  if (!relMatch) return '';
+  if (!relMatch) return block('outside-music-assets');
   const root = relMatch[1].toLowerCase();
   const rest = relMatch[2];
-  if (hasPathTraversal(rest)) return '';
+  if (hasPathTraversal(rest)) return block('path-traversal-rest');
 
   const lower = (root + '/' + rest).toLowerCase();
   const audioOk = /\.(mp3|m4a|ogg|wav)$/.test(lower);
   const imageOk = /\.(png|jpe?g|webp|gif)$/.test(lower);
-  if (kind === 'audio' && !audioOk) return '';
-  if (kind === 'image' && !imageOk) return '';
-  if (kind === 'any' && !audioOk && !imageOk) return '';
+  if (kind === 'audio' && !audioOk) return block('bad-audio-extension');
+  if (kind === 'image' && !imageOk) return block('bad-image-extension');
+  if (kind === 'any' && !audioOk && !imageOk) return block('bad-extension');
 
   // Rebuild relative URL; keep original percent-encoding for the matched suffix
   const encIdx = s.toLowerCase().search(/(?:^|\/)(music|assets)\//i);
@@ -126,9 +161,49 @@ function safeMediaUrl(raw, kind = 'any') {
 }
 
 function sanitizeAlbums(data) {
-  if (!Array.isArray(data)) return [];
+  if (!Array.isArray(data)) {
+    securityLog.warn('albums-not-array', { type: typeof data });
+    return [];
+  }
+  if (data.length > 100) {
+    securityLog.warn('albums-truncated', { count: data.length, kept: 100 });
+  }
   return data.slice(0, 100).map(a => {
     const tracks = Array.isArray(a?.tracks) ? a.tracks : [];
+    if (tracks.length > 200) {
+      securityLog.warn('tracks-truncated', {
+        album: a?.title,
+        count: tracks.length,
+        kept: 200
+      });
+    }
+    const safeTracks = tracks.slice(0, 200).map(t => {
+      const src = safeMediaUrl(t?.src, 'audio');
+      if (t?.src && !src) {
+        securityLog.warn('track-src-blocked', {
+          album: a?.title,
+          title: t?.title,
+          url: String(t.src).slice(0, 300)
+        });
+      }
+      const cover = t?.cover
+        ? safeMediaUrl(t.cover, 'image', { silent: false }) || undefined
+        : undefined;
+      return {
+        title: safeText(t?.title || 'Трек', 120),
+        src,
+        cover
+      };
+    }).filter(t => !!t.src);
+
+    const cover = safeMediaUrl(a?.cover, 'image') || './assets/cover2.jpg';
+    if (a?.cover && cover === './assets/cover2.jpg' && safeMediaUrl(a.cover, 'image', { silent: true }) === '') {
+      securityLog.warn('album-cover-fallback', {
+        album: a?.title,
+        url: String(a.cover).slice(0, 300)
+      });
+    }
+
     return {
       id: safeText(a?.id || a?.title || 'album', 80)
         .toLowerCase()
@@ -136,14 +211,10 @@ function sanitizeAlbums(data) {
         .replace(/[^a-z0-9а-яё_\-]/gi, '')
         .slice(0, 80) || 'album',
       title: safeText(a?.title || 'Без названия', 120),
-      cover: safeMediaUrl(a?.cover, 'image') || './assets/cover2.jpg',
+      cover,
       year: safeText(a?.year || '', 12),
       folder: safeText(a?.folder || a?.title || '', 120),
-      tracks: tracks.slice(0, 200).map(t => ({
-        title: safeText(t?.title || 'Трек', 120),
-        src: safeMediaUrl(t?.src, 'audio'),
-        cover: safeMediaUrl(t?.cover, 'image') || undefined
-      })).filter(t => !!t.src)
+      tracks: safeTracks
     };
   });
 }
@@ -599,7 +670,11 @@ function load(i, autoplay = false) {
   const t = tracks[i];
   const mediaSrc = safeMediaUrl(t.src, 'audio');
   if (!mediaSrc) {
-    console.warn('Blocked unsafe media URL');
+    securityLog.warn('play-blocked', {
+      index: i,
+      title: t.title,
+      url: String(t.src || '').slice(0, 300)
+    });
     return;
   }
 
@@ -714,15 +789,43 @@ function setNav(which) {
   });
 }
 
-function smoothGoTo(section) {
+let scrollAnimId = 0;
+
+/** Eased scroll between covers; durationMs controls smoothness (higher = slower/smoother) */
+function smoothGoTo(section, durationMs = 900) {
   if (!section || !snapMain) return;
+  const start = snapMain.scrollTop;
+  const end = section.offsetTop;
+  const dist = end - start;
+  if (Math.abs(dist) < 2) {
+    snapMain.scrollTop = end;
+    return;
+  }
+
   scrollLock = true;
-  section.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  setTimeout(() => { scrollLock = false; }, 700);
+  if (scrollAnimId) cancelAnimationFrame(scrollAnimId);
+
+  const duration = Math.max(320, Math.min(1800, durationMs));
+  const t0 = performance.now();
+  /* smooth ease-in-out cubic */
+  const ease = t => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+
+  const step = now => {
+    const p = Math.min(1, (now - t0) / duration);
+    snapMain.scrollTop = start + dist * ease(p);
+    if (p < 1) {
+      scrollAnimId = requestAnimationFrame(step);
+    } else {
+      snapMain.scrollTop = end;
+      scrollLock = false;
+      scrollAnimId = 0;
+    }
+  };
+  scrollAnimId = requestAnimationFrame(step);
 }
 
 function goToMusic() {
-  smoothGoTo(musicSection);
+  smoothGoTo(musicSection, 1000);
   setNav('music');
 }
 
@@ -754,45 +857,59 @@ if (snapMain) {
         e.preventDefault();
         return;
       }
+
+      /* Accumulate wheel: gentle rolls = longer/smoother transition, sharp flicks = faster */
       wheelAcc += e.deltaY;
       clearTimeout(wheelTimer);
-      wheelTimer = setTimeout(() => { wheelAcc = 0; }, 200);
-      if (Math.abs(wheelAcc) < 40) return;
+      wheelTimer = setTimeout(() => { wheelAcc = 0; }, 280);
+
+      const threshold = 28;
+      if (Math.abs(wheelAcc) < threshold) {
+        e.preventDefault();
+        return;
+      }
+
       e.preventDefault();
       const dir = wheelAcc > 0 ? 1 : -1;
+      const intensity = Math.min(1, Math.abs(wheelAcc) / 420);
+      /* intensity 0 → ~1400ms (very smooth), 1 → ~480ms (snappy) */
+      const duration = Math.round(1400 - intensity * 920);
       wheelAcc = 0;
+
       const sections = [...document.querySelectorAll('.cover')];
       const y = snapMain.scrollTop;
       let idx = 0;
       let best = Infinity;
       sections.forEach((s, i) => {
         const d = Math.abs(s.offsetTop - y);
-        if (d < best) { best = d; idx = i; }
+        if (d < best) {
+          best = d;
+          idx = i;
+        }
       });
       const next = sections[idx + dir];
-      if (next) smoothGoTo(next);
+      if (next) smoothGoTo(next, duration);
     },
     { passive: false }
   );
 }
 
 function getNewestTrackInfo() {
-  /* albums[0] = newest album; last track in list = newest song */
+  /* albums[0] = newest album; FIRST track = lead single for Listen button */
   if (!albums.length) return null;
   for (let i = 0; i < albums.length; i++) {
     const a = albums[i];
     const list = a.tracks || [];
     if (!list.length) continue;
-    const t = list[list.length - 1];
+    const t = list[0];
     return {
       albumIndex: i,
-      trackIndex: list.length - 1,
+      trackIndex: 0,
       title: t.title || 'NEW TRACK',
       albumTitle: a.title || '',
       label: list.length === 1 ? 'NEW SINGLE' : 'NEW TRACK'
     };
   }
-  /* no tracks yet — still show newest album name */
   return {
     albumIndex: 0,
     trackIndex: -1,
