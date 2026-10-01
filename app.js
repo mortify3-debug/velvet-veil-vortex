@@ -1165,7 +1165,7 @@ fetch('./albums.json?' + Date.now(), { cache: 'no-store' })
     updateListenButton();
   });
 
-// Minimal real-time visualizer: one thin line, always visible, behind the fixed player.
+// Real-time visualizer: one bright line aligned exactly with the second/album cover.
 (() => {
   const canvas = document.getElementById('audio-wave');
   const visualizer = document.getElementById('track-visualizer');
@@ -1176,10 +1176,17 @@ fetch('./albums.json?' + Date.now(), { cache: 'no-store' })
 
   const syncToCover = () => {
     const cover = document.getElementById('album-banner-cover');
-    const coverH = cover && cover.getBoundingClientRect().height || 96;
-    // 15% gap from the bottom and up to 25% of the second cover for line movement.
-    visualizer.style.setProperty('--viz-gap', `${Math.max(10, coverH * .15)}px`);
-    visualizer.style.setProperty('--viz-height', `${Math.max(56, coverH * .25 + 18)}px`);
+    if (!cover) return;
+    const r = cover.getBoundingClientRect();
+    if (!r.width || !r.height) return;
+
+    // Exactly the same horizontal span as the second/album cover.
+    visualizer.style.left = `${r.left}px`;
+    visualizer.style.width = `${r.width}px`;
+    // The line is placed 15% of the cover height above the bottom of the screen.
+    visualizer.style.bottom = `${Math.max(18, r.height * 0.15)}px`;
+    // The line can rise up to roughly 25% of the cover height.
+    visualizer.style.height = `${Math.max(60, r.height * 0.25)}px`;
     resize();
   };
 
@@ -1187,30 +1194,60 @@ fetch('./albums.json?' + Date.now(), { cache: 'no-store' })
     const rect = canvas.getBoundingClientRect();
     if (!rect.width || !rect.height) return;
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    const w = Math.round(rect.width * dpr);
-    const h = Math.round(rect.height * dpr);
-    if (w !== canvas.width || h !== canvas.height) {
+    const w = Math.max(1, Math.round(rect.width * dpr));
+    const h = Math.max(1, Math.round(rect.height * dpr));
+    if (canvas.width !== w || canvas.height !== h) {
       canvas.width = w;
       canvas.height = h;
     }
   };
 
-  const drawIdle = () => {
+  const drawLine = (active = false) => {
     resize();
     const w = canvas.width, h = canvas.height;
     if (!w || !h) return;
     ctx.clearRect(0, 0, w, h);
-    const y = h - Math.max(2, h * .035);
+
+    // Baseline at the bottom; the animation rises upward from this line.
+    const base = h - Math.max(2, h * 0.025);
     const g = ctx.createLinearGradient(0, 0, w, 0);
-    g.addColorStop(0, 'rgba(46,240,255,.38)');
-    g.addColorStop(.5, 'rgba(182,151,255,.48)');
-    g.addColorStop(1, 'rgba(255,45,145,.42)');
+    g.addColorStop(0, active ? 'rgba(46,240,255,1)' : 'rgba(46,240,255,.78)');
+    g.addColorStop(.5, active ? 'rgba(190,150,255,1)' : 'rgba(190,150,255,.82)');
+    g.addColorStop(1, active ? 'rgba(255,45,145,1)' : 'rgba(255,45,145,.8)');
+
     ctx.beginPath();
-    ctx.moveTo(0, y); ctx.lineTo(w, y);
+    if (!active || !analyser) {
+      ctx.moveTo(0, base);
+      ctx.lineTo(w, base);
+    } else {
+      analyser.getByteFrequencyData(freq);
+      analyser.getByteTimeDomainData(timeData);
+      let low = 0;
+      const lowN = Math.max(4, Math.floor(freq.length * .045));
+      for (let i = 0; i < lowN; i++) low += freq[i];
+      const bass = low / lowN / 255;
+      const maxAmp = h * 0.98;
+      const points = Math.max(160, Math.floor(w / 2));
+
+      for (let i = 0; i <= points; i++) {
+        const p = i / points;
+        const fi = Math.min(freq.length - 1, Math.floor(p * freq.length * .65));
+        const amp = freq[fi] / 255;
+        const sample = Math.abs(timeData[Math.floor(p * (timeData.length - 1))] / 128 - 1);
+        const energy = Math.max(.035, amp * .82 + sample * .22 + bass * .8);
+        const displacement = Math.min(maxAmp, maxAmp * energy);
+        const y = base - displacement;
+        if (i === 0) ctx.moveTo(0, y);
+        else ctx.lineTo(p * w, y);
+      }
+    }
+
     ctx.strokeStyle = g;
-    ctx.lineWidth = Math.max(1.2, h * .018);
-    ctx.shadowBlur = 7;
-    ctx.shadowColor = 'rgba(46,240,255,.35)';
+    ctx.lineWidth = Math.max(2.2, h * 0.025);
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.shadowBlur = active ? 16 : 9;
+    ctx.shadowColor = active ? 'rgba(46,240,255,.95)' : 'rgba(46,240,255,.62)';
     ctx.stroke();
     ctx.shadowBlur = 0;
   };
@@ -1223,7 +1260,7 @@ fetch('./albums.json?' + Date.now(), { cache: 'no-store' })
         audioContext = new AudioCtx();
         analyser = audioContext.createAnalyser();
         analyser.fftSize = 2048;
-        analyser.smoothingTimeConstant = 0.58;
+        analyser.smoothingTimeConstant = .52;
         sourceNode = audioContext.createMediaElementSource(audio);
         sourceNode.connect(analyser);
         analyser.connect(audioContext.destination);
@@ -1233,70 +1270,22 @@ fetch('./albums.json?' + Date.now(), { cache: 'no-store' })
       if (audioContext.state === 'suspended') await audioContext.resume();
       syncToCover();
       if (!rafId) draw();
-    } catch (err) { console.warn('Audio visualizer unavailable:', err); }
+    } catch (err) {
+      console.warn('Audio visualizer unavailable:', err);
+      drawLine(false);
+    }
   };
 
   const draw = () => {
     rafId = requestAnimationFrame(draw);
-    resize();
-    const w = canvas.width, h = canvas.height;
-    if (!w || !h) return;
-    ctx.clearRect(0, 0, w, h);
-
-    const base = h - Math.max(2, h * .035);
-    if (!analyser || audio.paused) {
-      // Always keep the line visible when nothing is playing.
-      const g = ctx.createLinearGradient(0, 0, w, 0);
-      g.addColorStop(0, 'rgba(46,240,255,.38)');
-      g.addColorStop(.5, 'rgba(182,151,255,.48)');
-      g.addColorStop(1, 'rgba(255,45,145,.42)');
-      ctx.beginPath(); ctx.moveTo(0, base); ctx.lineTo(w, base);
-      ctx.strokeStyle = g; ctx.lineWidth = Math.max(1.2, h * .018);
-      ctx.shadowBlur = 7; ctx.shadowColor = 'rgba(46,240,255,.35)'; ctx.stroke(); ctx.shadowBlur = 0;
-      return;
-    }
-
-    analyser.getByteFrequencyData(freq);
-    analyser.getByteTimeDomainData(timeData);
-
-    let low = 0;
-    const lowN = Math.max(3, Math.floor(freq.length * .055));
-    for (let i = 0; i < lowN; i++) low += freq[i];
-    const bass = low / lowN / 255;
-    // Full movement can reach 25% of the second cover height.
-    const maxAmp = h * .92;
-    const g = ctx.createLinearGradient(0, 0, w, 0);
-    g.addColorStop(0, 'rgba(46,240,255,.9)');
-    g.addColorStop(.5, 'rgba(182,151,255,.9)');
-    g.addColorStop(1, 'rgba(255,45,145,.95)');
-
-    ctx.beginPath();
-    const points = Math.max(80, Math.floor(w / 2));
-    for (let x = 0; x <= points; x++) {
-      const p = x / points;
-      const fi = Math.min(freq.length - 1, Math.floor(p * freq.length * .78));
-      const amp = freq[fi] / 255;
-      const sample = timeData[Math.floor(p * (timeData.length - 1))] / 128 - 1;
-      const energy = Math.max(.025, amp * .72 + Math.abs(sample) * .18 + bass * .7);
-      const displacement = Math.min(maxAmp, maxAmp * energy);
-      // Baseline stays near the bottom; the line rises strongly with the music.
-      const y = base - displacement * (.68 + .32 * Math.abs(Math.sin(p * Math.PI * 5)));
-      if (x === 0) ctx.moveTo(0, y);
-      else ctx.lineTo(p * w, y);
-    }
-    ctx.strokeStyle = g;
-    ctx.lineWidth = Math.max(1.5, h * .022);
-    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-    ctx.shadowBlur = 10; ctx.shadowColor = 'rgba(46,240,255,.72)';
-    ctx.stroke();
-    ctx.shadowBlur = 0;
+    syncToCover();
+    drawLine(!audio.paused && !!analyser);
   };
 
   syncToCover();
-  drawIdle();
+  drawLine(false);
   audio.addEventListener('play', setup);
-  audio.addEventListener('pause', drawIdle);
+  audio.addEventListener('pause', () => drawLine(false));
   window.addEventListener('resize', syncToCover, { passive: true });
   window.addEventListener('load', syncToCover, { once: true });
 })();
-
