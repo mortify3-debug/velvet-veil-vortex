@@ -1197,23 +1197,23 @@ fetch('./albums.json?' + Date.now(), { cache: 'no-store' })
       || document.querySelector('.album-card-cover img');
     const player = document.getElementById('player');
 
-    let left = 0;
-    let width = Math.min(window.innerWidth * 0.7, 900);
+    // Anchor the visualizer to the exact horizontal center of the player,
+    // rather than to the album cover. Make it deliberately wider than the player.
+    let centerX = window.innerWidth / 2;
+    let width = Math.min(window.innerWidth * 0.94, 1100);
 
-    if (cover) {
-      const r = cover.getBoundingClientRect();
-      if (r.width > 0 && r.height > 0) {
-        left = r.left;
-        width = r.width;
+    if (player) {
+      const pr = player.getBoundingClientRect();
+      if (pr.width > 0) {
+        centerX = pr.left + pr.width / 2;
+        width = Math.min(window.innerWidth * 0.94, pr.width * 1.18);
       }
-    } else {
-      // Safe fallback before an album is opened.
-      width = Math.min(window.innerWidth * 0.7, 900);
-      left = (window.innerWidth - width) / 2;
     }
 
-    visualizer.style.left = `${Math.max(0, left)}px`;
-    visualizer.style.width = `${Math.max(1, Math.min(width, window.innerWidth))}px`;
+    const finalWidth = Math.max(1, Math.min(width, window.innerWidth));
+    const finalLeft = Math.max(0, Math.min(window.innerWidth - finalWidth, centerX - finalWidth / 2));
+    visualizer.style.left = `${finalLeft}px`;
+    visualizer.style.width = `${finalWidth}px`;
     visualizer.style.display = 'block';
     visualizer.style.visibility = 'visible';
     visualizer.style.opacity = '1';
