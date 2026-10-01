@@ -1238,10 +1238,10 @@ fetch('./albums.json?' + Date.now(), { cache: 'no-store' })
       visualizer.style.bottom = `${Math.max(18, coverH * 0.15)}px`;
     }
 
-    // Use the full vertical space above the progress-line baseline, rather than
-    // restricting movement to a fraction of the album-cover height.
-    const baselineY = window.innerHeight - (parseFloat(visualizer.style.bottom) || 0);
-    visualizer.style.height = `${Math.max(100, baselineY - 4)}px`;
+    // Keep the visualizer entirely within the lower third of the viewport.
+    visualizer.style.top = `${Math.round(window.innerHeight * 2 / 3)}px`;
+    visualizer.style.bottom = '0px';
+    visualizer.style.height = `${Math.max(1, Math.ceil(window.innerHeight / 3))}px`;
     resize();
   };
 
@@ -1251,11 +1251,12 @@ fetch('./albums.json?' + Date.now(), { cache: 'no-store' })
     if (!w || !h) return;
     ctx.clearRect(0, 0, w, h);
 
-    const base = h - Math.max(2, h * 0.025);
+    // Baseline is placed in the lower portion of the lower-third visualizer zone.
+    const base = h * 0.82;
     const g = ctx.createLinearGradient(0, 0, w, 0);
-    g.addColorStop(0, active ? 'rgba(46,240,255,1)' : 'rgba(46,240,255,.9)');
-    g.addColorStop(.5, active ? 'rgba(190,150,255,1)' : 'rgba(190,150,255,.92)');
-    g.addColorStop(1, active ? 'rgba(255,45,145,1)' : 'rgba(255,45,145,.9)');
+    g.addColorStop(0, 'rgba(46,240,255,.62)');
+    g.addColorStop(.5, 'rgba(190,150,255,.64)');
+    g.addColorStop(1, 'rgba(255,45,145,.62)');
 
     ctx.beginPath();
     if (!active || !analyser) {
@@ -1264,20 +1265,23 @@ fetch('./albums.json?' + Date.now(), { cache: 'no-store' })
     } else {
       analyser.getByteFrequencyData(freq);
       analyser.getByteTimeDomainData(timeData);
-      let low = 0;
-      const lowN = Math.max(4, Math.floor(freq.length * .045));
-      for (let i = 0; i < lowN; i++) low += freq[i];
-      const bass = low / lowN / 255;
-      const maxAmp = h;
+      // Normalize each frame to its own peak so the visual response does not
+      // collapse when the player volume is reduced.
+      let peak = 0;
+      for (let i = 0; i < freq.length; i++) peak = Math.max(peak, freq[i]);
+      const maxAmp = h * 0.78;
+      let timePeak = 0.015;
+      for (let i = 0; i < timeData.length; i++) timePeak = Math.max(timePeak, Math.abs((timeData[i] - 128) / 128));
       const points = Math.max(160, Math.floor(w / 2));
 
       for (let i = 0; i <= points; i++) {
         const p = i / points;
         const fi = Math.min(freq.length - 1, Math.floor(p * freq.length * .65));
-        const amp = freq[fi] / 255;
-        const sample = Math.abs(timeData[Math.floor(p * (timeData.length - 1))] / 128 - 1);
-        const energy = Math.max(.035, amp * .82 + sample * .22 + bass * .8);
-        const y = base - maxAmp * energy;
+        const amp = peak > 0 ? freq[fi] / peak : 0;
+        const raw = (timeData[Math.floor(p * (timeData.length - 1))] - 128) / 128;
+        const sample = Math.abs(raw) / timePeak;
+        const energy = Math.max(.06, amp * .58 + sample * .62);
+        const y = base - maxAmp * Math.min(1, energy);
         if (i === 0) ctx.moveTo(0, y);
         else ctx.lineTo(p * w, y);
       }
@@ -1287,8 +1291,8 @@ fetch('./albums.json?' + Date.now(), { cache: 'no-store' })
     ctx.lineWidth = Math.max(2.5, h * 0.025);
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
-    ctx.shadowBlur = active ? 18 : 11;
-    ctx.shadowColor = active ? 'rgba(46,240,255,.98)' : 'rgba(46,240,255,.7)';
+    ctx.shadowBlur = active ? 14 : 8;
+    ctx.shadowColor = 'rgba(46,240,255,.55)';
     ctx.stroke();
     ctx.shadowBlur = 0;
   };
