@@ -1218,16 +1218,21 @@ fetch('./albums.json?' + Date.now(), { cache: 'no-store' })
     visualizer.style.visibility = 'visible';
     visualizer.style.opacity = '1';
 
-    // Keep the baseline just behind/above the fixed player. This prevents the
-    // player itself from hiding the line while retaining the requested gap.
-    if (player) {
-      const pr = player.getBoundingClientRect();
-      if (pr.height > 0) {
-        const gap = cover ? Math.max(8, cover.getBoundingClientRect().height * 0.04) : 8;
-        visualizer.style.bottom = `${Math.max(8, window.innerHeight - pr.top + gap)}px`;
+    // Put the visualizer baseline exactly on the player's seek/progress line.
+    // The visualizer stays behind the player, while the transparent player
+    // lets the neon line remain visible at the same vertical level.
+    const seekTrack = document.querySelector('.seek-track');
+    if (seekTrack) {
+      const sr = seekTrack.getBoundingClientRect();
+      if (sr.width > 0 && sr.height > 0) {
+        const seekCenterY = sr.top + sr.height / 2;
+        visualizer.style.bottom = `${Math.max(0, window.innerHeight - seekCenterY)}px`;
       } else {
         visualizer.style.bottom = '42px';
       }
+    } else if (player) {
+      const pr = player.getBoundingClientRect();
+      visualizer.style.bottom = `${Math.max(8, window.innerHeight - pr.bottom + 22)}px`;
     } else {
       const coverH = cover?.getBoundingClientRect().height || 220;
       visualizer.style.bottom = `${Math.max(18, coverH * 0.15)}px`;
