@@ -1175,6 +1175,9 @@ fetch('./albums.json?' + Date.now(), { cache: 'no-store' })
 
   let audioContext = null, analyser = null, sourceNode = null, rafId = 0;
   let freq = null, timeData = null;
+  // Temporal smoothing buffer so the line doesn't flicker frame-to-frame
+  let smoothEnergy = null;
+  let lastGlobal = 0;
 
   const resize = () => {
     const rect = canvas.getBoundingClientRect();
@@ -1250,26 +1253,78 @@ fetch('./albums.json?' + Date.now(), { cache: 'no-store' })
     if (!active || !analyser) {
       ctx.moveTo(0, base);
       ctx.lineTo(w, base);
+      // Slowly decay smoothing buffer when silent
+      if (smoothEnergy) {
+        for (let i = 0; i < smoothEnergy.length; i++) smoothEnergy[i] *= 0.92;
+      }
+      lastGlobal *= 0.9;
     } else {
       analyser.getByteFrequencyData(freq);
       analyser.getByteTimeDomainData(timeData);
-      // Normalize each frame to its own peak so the visual response does not
-      // collapse when the player volume is reduced.
+
+      const binCount = freq.length;
+      // Frequency band emphasis (FFT bin indices, ~21.5 Hz/bin at 44.1 kHz):
+      // bass/kick ~ 1–25, low-mid ~ 25–80, vocal presence ~ 80–220, highs ~ 220+
+      let bassSum = 0, midSum = 0, highSum = 0, bassN = 0, midN = 0, highN = 0;
+      for (let i = 1; i < binCount; i++) {
+        const v = freq[i];
+        if (i < 25) { bassSum += v; bassN++; }
+        else if (i < 80) { midSum += v * 1.15; midN++; }
+        else if (i < 220) { highSum += v * 1.35; highN++; }
+        else if (i < 400) { highSum += v * 0.7; highN++; }
+      }
+      const bassAvg = bassN ? bassSum / bassN : 0;
+      const midAvg = midN ? midSum / midN : 0;
+      const highAvg = highN ? highSum / highN : 0;
+
+      // Overall loudness (for gating quiet parts)
       let peak = 0;
-      for (let i = 0; i < freq.length; i++) peak = Math.max(peak, freq[i]);
+      for (let i = 0; i < binCount; i++) peak = Math.max(peak, freq[i]);
+      const globalRaw = Math.max(bassAvg * 0.9, midAvg * 1.1, highAvg * 1.2, peak * 0.55);
+      // Soft threshold: ignore very quiet frames, emphasize loud ones
+      const threshold = 28;
+      const gated = Math.max(0, globalRaw - threshold);
+      const globalNorm = Math.min(1, Math.pow(gated / 140, 1.35));
+      // Smooth global activity
+      lastGlobal = lastGlobal * 0.78 + globalNorm * 0.22;
+
+      // Transient boost from waveform (drums / strong hits)
+      let timePeak = 0.02;
+      for (let i = 0; i < timeData.length; i++) {
+        timePeak = Math.max(timePeak, Math.abs((timeData[i] - 128) / 128));
+      }
+      const transient = Math.min(1, Math.pow(Math.max(0, timePeak - 0.12) / 0.55, 1.6));
+
       const maxAmp = h * 0.78;
-      let timePeak = 0.015;
-      for (let i = 0; i < timeData.length; i++) timePeak = Math.max(timePeak, Math.abs((timeData[i] - 128) / 128));
-      const points = Math.max(160, Math.floor(w / 2));
+      const points = Math.max(120, Math.floor(w / 3));
+      if (!smoothEnergy || smoothEnergy.length !== points + 1) {
+        smoothEnergy = new Float32Array(points + 1);
+      }
+
+      // Gate factor: almost flat when quiet, expressive when loud / transient
+      const activity = Math.min(1, lastGlobal * 0.85 + transient * 0.55);
+      const floor = 0.04; // tiny residual so line never completely dies
 
       for (let i = 0; i <= points; i++) {
         const p = i / points;
-        const fi = Math.min(freq.length - 1, Math.floor(p * freq.length * .65));
-        const amp = peak > 0 ? freq[fi] / peak : 0;
-        const raw = (timeData[Math.floor(p * (timeData.length - 1))] - 128) / 128;
-        const sample = Math.abs(raw) / timePeak;
-        const energy = Math.max(.06, amp * .58 + sample * .62);
-        const y = base - maxAmp * Math.min(1, energy);
+        // Sample frequency with emphasis on mids/highs for vocals + some bass
+        const fi = Math.min(binCount - 1, Math.floor(2 + p * (binCount * 0.55)));
+        const local = freq[fi] / 255;
+
+        // Shape: suppress soft, boost peaks (drums / belting)
+        let shaped = Math.max(0, local - 0.12);
+        shaped = Math.pow(shaped / 0.88, 1.55);
+
+        // Mix local shape with global activity + transient punch
+        let energy = floor + shaped * (0.45 + activity * 0.55) * (0.55 + lastGlobal * 0.45);
+        energy += transient * 0.22 * (0.4 + Math.sin(p * Math.PI) * 0.6); // soft center-weighted punch
+        energy = Math.min(1, energy);
+
+        // Temporal smoothing (stronger = less flicker)
+        const lerp = 0.18 + activity * 0.12; // slightly faster when loud
+        smoothEnergy[i] = smoothEnergy[i] * (1 - lerp) + energy * lerp;
+
+        const y = base - maxAmp * smoothEnergy[i];
         if (i === 0) ctx.moveTo(0, y);
         else ctx.lineTo(p * w, y);
       }
@@ -1293,7 +1348,8 @@ fetch('./albums.json?' + Date.now(), { cache: 'no-store' })
         audioContext = new AudioCtx();
         analyser = audioContext.createAnalyser();
         analyser.fftSize = 2048;
-        analyser.smoothingTimeConstant = .52;
+        // Higher smoothing = less frame-to-frame flicker, still reactive to hits
+        analyser.smoothingTimeConstant = 0.78;
         sourceNode = audioContext.createMediaElementSource(audio);
         sourceNode.connect(analyser);
         analyser.connect(audioContext.destination);
