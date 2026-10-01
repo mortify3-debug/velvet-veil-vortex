@@ -1472,3 +1472,55 @@ audio { display: none; }
 .music-stage {
   transition: opacity 0.5s ease, transform 0.5s ease;
 }
+
+/* Listen button: thicker pink/cyan neon frame and denser smoke */
+.listen-btn {
+  min-height: 112px;
+  padding: 22px 42px 22px 26px;
+  border: 0;
+  background: linear-gradient(115deg, rgba(255, 45, 145, .24), rgba(46, 240, 255, .24) 52%, rgba(255, 45, 145, .3)), rgba(7, 8, 18, .96);
+  box-shadow: 0 0 22px rgba(255,45,145,.3), 0 0 28px rgba(46,240,255,.24), 0 12px 36px rgba(0,0,0,.55);
+}
+.listen-neon {
+  inset: 0;
+  padding: 12px;
+  background: conic-gradient(from 0deg, #ff2d91 0deg, #ff9bd0 70deg, #ffffff 115deg, #2ef0ff 180deg, #8cffff 235deg, #ff2d91 300deg, #ff2d91 360deg);
+  opacity: .82;
+  animation: neon-orbit 3s linear infinite;
+}
+.listen-btn:hover .listen-neon,
+.listen-btn:focus-visible .listen-neon { opacity: 1; }
+.listen-btn:hover {
+  background: linear-gradient(115deg, rgba(255,45,145,.4), rgba(46,240,255,.38) 52%, rgba(255,45,145,.42)), rgba(7,8,18,.98);
+  box-shadow: 0 0 18px rgba(255,45,145,.7), 0 0 42px rgba(46,240,255,.6), 0 0 60px rgba(255,45,145,.38), 0 12px 40px rgba(0,0,0,.55);
+}
+.listen-play { color: #ff75bd; filter: drop-shadow(0 0 9px rgba(255,45,145,.95)) drop-shadow(0 0 8px rgba(46,240,255,.65)); }
+.listen-title { text-shadow: 0 0 12px rgba(255,45,145,.7), 0 0 20px rgba(46,240,255,.42); }
+.listen-cta { color: #70f5ff; text-shadow: 0 0 10px rgba(46,240,255,.75); }
+.listen-smoke::before,
+.listen-smoke::after {
+  left: 5%; right: 5%; bottom: -28px; height: 125%;
+  background:
+    radial-gradient(ellipse at 12% 82%, rgba(46,240,255,.58), transparent 44%),
+    radial-gradient(ellipse at 28% 72%, rgba(255,45,145,.54), transparent 48%),
+    radial-gradient(ellipse at 48% 88%, rgba(220,225,255,.46), transparent 46%),
+    radial-gradient(ellipse at 68% 78%, rgba(46,240,255,.5), transparent 45%),
+    radial-gradient(ellipse at 88% 84%, rgba(255,45,145,.56), transparent 48%);
+  filter: blur(15px);
+}
+.listen-btn.smoke-active .listen-smoke::before { animation: smoke-rise 1.7s ease-out both; }
+.listen-btn.smoke-active .listen-smoke::after { animation: smoke-rise 2s .08s ease-out both; }
+@keyframes smoke-rise {
+  0% { opacity: 0; transform: translateY(22px) scale(.7); }
+  22% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-66px) scale(1.65); }
+}
+@media (max-width: 600px) {
+  .listen-btn { min-height: 104px; padding: 17px 20px 17px 14px; gap: 12px; }
+  .listen-neon { padding: 10px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .listen-neon { animation: none; }
+  .listen-btn.smoke-active .listen-smoke::before,
+  .listen-btn.smoke-active .listen-smoke::after { animation: none; opacity: .75; }
+}
