@@ -124,23 +124,24 @@ function applySeek(percent) {
   }
 }
 
-function setAlbumOpenMode(on) {
-  const stage = document.querySelector('.music-stage');
-  if (stage) stage.classList.toggle('album-open', !!on);
+function trackCountLabel(n) {
+  if (!n) return 'нет треков';
+  if (n === 1) return '1 трек';
+  if (n < 5) return `${n} трека`;
+  return `${n} треков`;
 }
 
-function renderAlbums() {
+function renderAlbums(expandIndex = -1) {
   albumGrid.innerHTML = '';
   const hasAlbums = albums.length > 0;
   empty.hidden = hasAlbums;
   albumGrid.hidden = false;
-  trackPanel.hidden = true;
-  backBtn.hidden = true;
+  if (trackPanel) trackPanel.hidden = true;
+  if (backBtn) backBtn.hidden = true;
   const backOverlay = document.getElementById('back-btn-overlay');
   if (backOverlay) backOverlay.hidden = true;
   musicHeading.textContent = 'АЛЬБОМЫ';
-  setAlbumOpenMode(false);
-  activeAlbumIndex = -1;
+  activeAlbumIndex = expandIndex;
 
   if (!hasAlbums) {
     empty.hidden = false;
@@ -148,35 +149,58 @@ function renderAlbums() {
     return;
   }
 
-  albums.forEach((album, ai) => {
-    const card = document.createElement('article');
-    card.className = 'album-card';
-    card.tabIndex = 0;
-    card.setAttribute('role', 'button');
-    card.setAttribute('aria-label', `Альбом ${album.title}`);
+  const anyExpanded = expandIndex >= 0;
 
+  albums.forEach((album, ai) => {
+    const expanded = ai === expandIndex;
     const cover = album.cover || './assets/cover2.jpg';
     const n = (album.tracks || []).length;
-    const meta = [
-      album.year || null,
-      n ? `${n} ${n === 1 ? 'трек' : n < 5 ? 'трека' : 'треков'}` : 'нет треков'
-    ].filter(Boolean).join(' · ');
+    const meta = [album.year || null, trackCountLabel(n)].filter(Boolean).join(' · ');
+
+    const card = document.createElement('article');
+    card.className =
+      'album-card' +
+      (expanded ? ' is-expanded' : '') +
+      (anyExpanded && !expanded ? ' is-collapsed' : '');
+    card.dataset.albumIndex = String(ai);
+    card.tabIndex = 0;
+    card.setAttribute('role', 'button');
+    card.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    card.setAttribute('aria-label', `Альбом ${album.title}`);
 
     card.innerHTML = `
-      <div class="album-card-cover">
-        <img src="${esc(cover)}" alt="${esc(album.title)}"
-             loading="lazy"
-             onerror="this.onerror=null;this.src='./assets/cover2.jpg'">
-        <button type="button" class="album-card-play" data-album-index="${ai}"
-                aria-label="Играть ${esc(album.title)}" ${n ? '' : 'disabled'}>▶</button>
+      <div class="album-card-row">
+        <div class="album-card-cover">
+          <img src="${esc(cover)}" alt="${esc(album.title)}"
+               loading="lazy"
+               onerror="this.onerror=null;this.src='./assets/cover2.jpg'">
+          <button type="button" class="album-card-play" data-album-index="${ai}"
+                  aria-label="Играть ${esc(album.title)}" ${n ? '' : 'disabled'}>▶</button>
+        </div>
+        <div class="album-card-info">
+          <h3>${esc(album.title)}</h3>
+          <div class="album-card-meta">${esc(meta)}</div>
+        </div>
+        <span class="album-card-chevron" aria-hidden="true">${expanded ? '▾' : '▸'}</span>
       </div>
-      <div class="album-card-info">
-        <h3>${esc(album.title)}</h3>
-        <div class="album-card-meta">${esc(meta)}</div>
-      </div>`;
+      <div class="album-card-tracks" ${expanded ? '' : 'hidden'}></div>`;
 
-    const open = () => openAlbum(ai);
-    card.addEventListener('click', open);
+    const header = card.querySelector('.album-card-row');
+    const tracksBox = card.querySelector('.album-card-tracks');
+
+    const open = () => {
+      if (expanded) {
+        /* click again on expanded header → collapse all to list */
+        renderAlbums(-1);
+      } else {
+        openAlbum(ai, false);
+      }
+    };
+
+    header.addEventListener('click', e => {
+      if (e.target.closest('.album-card-play')) return;
+      open();
+    });
     card.addEventListener('keydown', e => {
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
@@ -187,6 +211,15 @@ function renderAlbums() {
       e.stopPropagation();
       if (n) toggleAlbumPlay(ai);
     });
+
+    if (expanded) {
+      tracks = (album.tracks || []).map(t => ({
+        ...t,
+        cover: t.cover || album.cover || './assets/cover2.jpg',
+        albumTitle: album.title
+      }));
+      renderTracksInto(tracksBox);
+    }
 
     albumGrid.appendChild(card);
   });
@@ -205,43 +238,29 @@ function openAlbum(ai, autoplayFirst = false) {
     albumTitle: album.title
   }));
 
-  albumGrid.hidden = true;
-  trackPanel.hidden = false;
-  backBtn.hidden = true; /* overlay back on banner is enough */
-  const backOverlay = document.getElementById('back-btn-overlay');
-  if (backOverlay) backOverlay.hidden = false;
-  musicHeading.textContent = album.title;
-  setAlbumOpenMode(true);
+  renderAlbums(ai);
 
-  const bannerImg = document.getElementById('album-banner-cover');
-  bannerImg.src = album.cover || './assets/cover2.jpg';
-  bannerImg.onerror = () => {
-    bannerImg.onerror = null;
-    bannerImg.src = './assets/cover2.jpg';
-  };
-  document.getElementById('album-banner-title').textContent = album.title;
-  document.getElementById('album-banner-year').textContent = album.year || '';
-  document.getElementById('album-banner-count').textContent = tracks.length
-    ? `${tracks.length} ${tracks.length === 1 ? 'ТРЕК' : tracks.length < 5 ? 'ТРЕКА' : 'ТРЕКОВ'}`
-    : 'НЕТ ТРЕКОВ';
-
-  renderTracks();
   if (autoplayFirst && tracks.length) load(0, true);
 
-  /* Show cover + first track at the top of the music stage */
-  const stage = document.querySelector('.music-stage');
-  if (stage) {
-    stage.scrollTop = 0;
-    requestAnimationFrame(() => { stage.scrollTop = 0; });
-  }
+  /* Keep expanded album near the top of the list area */
+  requestAnimationFrame(() => {
+    const card = albumGrid.querySelector(`.album-card[data-album-index="${ai}"]`);
+    const stage = document.querySelector('.music-stage');
+    if (card && stage) {
+      const top = card.offsetTop - 12;
+      stage.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+    }
+  });
 }
 
-function renderTracks() {
-  trackList.innerHTML = '';
+function renderTracksInto(container) {
+  if (!container) return;
+  container.innerHTML = '';
+  container.hidden = false;
 
   if (!tracks.length) {
-    trackList.innerHTML =
-      '<div class="empty" style="padding:24px 8px">В этом альбоме пока нет MP3.<br>Положите файлы в <b>music/' +
+    container.innerHTML =
+      '<div class="empty" style="padding:16px 8px">В этом альбоме пока нет MP3.<br>Положите файлы в <b>music/' +
       esc(albums[activeAlbumIndex]?.folder || '') +
       '/</b></div>';
     return;
@@ -249,7 +268,7 @@ function renderTracks() {
 
   tracks.forEach((t, i) => {
     const row = document.createElement('article');
-    row.className = 'track' + (sameTrack(i) && !audio.paused ? ' active' : '');
+    row.className = 'track' + (sameTrack(i) ? ' active' : '');
     row.dataset.index = i;
 
     const volPct = Math.round((audio.volume || 0.9) * 100);
@@ -273,7 +292,7 @@ function renderTracks() {
         <a class="download-card" href="${esc(t.src)}" download>⇩</a>
       </div>`;
 
-    trackList.appendChild(row);
+    container.appendChild(row);
 
     const probe = new Audio();
     probe.preload = 'metadata';
@@ -299,6 +318,14 @@ function renderTracks() {
   });
 
   updatePlayButtons();
+}
+
+function renderTracks() {
+  const box = albumGrid.querySelector('.album-card.is-expanded .album-card-tracks');
+  if (box) renderTracksInto(box);
+  else if (trackList) {
+    trackList.innerHTML = '';
+  }
 }
 
 function syncAllVolumeBars() {
@@ -608,7 +635,7 @@ listenBtn.addEventListener('click', () => {
 });
 
 function goBackToAlbums() {
-  renderAlbums();
+  renderAlbums(-1);
   const stage = document.querySelector('.music-stage');
   if (stage) stage.scrollTop = 0;
 }

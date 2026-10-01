@@ -352,40 +352,92 @@ body {
   color: var(--pink);
 }
 
-/* Albums — single column (~30% larger on desktop) */
+/* Albums — accordion list */
 .album-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 18px;
+  gap: 12px;
 }
 
 .album-card {
-  cursor: pointer;
-  display: grid;
-  grid-template-columns: 114px 1fr;
-  gap: 0;
   background: rgba(16, 16, 24, 0.6);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 14px;
   overflow: hidden;
-  transition: border-color 0.2s, box-shadow 0.25s, transform 0.2s;
+  transition: border-color 0.2s, box-shadow 0.25s, background 0.2s;
   -webkit-tap-highlight-color: transparent;
 }
 
 .album-card:hover,
 .album-card:focus-visible {
-  border-color: rgba(255, 45, 145, 0.5);
-  box-shadow: 0 0 24px rgba(255, 45, 145, 0.18);
-  transform: translateY(-2px);
+  border-color: rgba(255, 45, 145, 0.45);
+  box-shadow: 0 0 20px rgba(255, 45, 145, 0.14);
   outline: none;
+}
+
+.album-card.is-expanded {
+  border-color: rgba(255, 45, 145, 0.55);
+  box-shadow: 0 0 28px rgba(255, 45, 145, 0.2);
+  background: rgba(16, 16, 24, 0.78);
+}
+
+.album-card-row {
+  display: grid;
+  grid-template-columns: 72px 1fr auto;
+  align-items: center;
+  gap: 0;
+  cursor: pointer;
+  min-height: 72px;
+}
+
+.album-card.is-expanded .album-card-row {
+  grid-template-columns: 96px 1fr auto;
+  min-height: 96px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.album-card.is-collapsed .album-card-row {
+  grid-template-columns: 48px 1fr auto;
+  min-height: 52px;
+}
+
+.album-card.is-collapsed .album-card-cover {
+  width: 48px;
+  height: 48px;
+}
+
+.album-card.is-collapsed .album-card-play {
+  width: 28px;
+  height: 28px;
+  font-size: 11px;
+  opacity: 1;
+}
+
+.album-card.is-collapsed .album-card-info {
+  padding: 8px 12px;
+}
+
+.album-card.is-collapsed .album-card-info h3 {
+  font-size: 14px;
+  margin: 0 0 2px;
+}
+
+.album-card.is-collapsed .album-card-meta {
+  font-size: 11px;
 }
 
 .album-card-cover {
   position: relative;
-  width: 114px;
-  height: 114px;
+  width: 72px;
+  height: 72px;
   overflow: hidden;
   background: #17171e;
+  flex-shrink: 0;
+}
+
+.album-card.is-expanded .album-card-cover {
+  width: 96px;
+  height: 96px;
 }
 
 .album-card-cover img {
@@ -399,13 +451,13 @@ body {
   position: absolute;
   inset: 0;
   margin: auto;
-  width: 46px;
-  height: 46px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   border: none;
   background: var(--pink);
   color: #fff;
-  font-size: 16px;
+  font-size: 13px;
   display: grid;
   place-items: center;
   cursor: pointer;
@@ -415,26 +467,53 @@ body {
 }
 
 .album-card:hover .album-card-play,
-.album-card:focus-within .album-card-play {
+.album-card:focus-within .album-card-play,
+.album-card.is-expanded .album-card-play {
   opacity: 1;
 }
 
 .album-card-info {
-  padding: 18px 22px;
+  padding: 12px 14px;
   display: flex;
   flex-direction: column;
   justify-content: center;
+  min-width: 0;
 }
 
 .album-card-info h3 {
-  margin: 0 0 6px;
-  font-size: 21px;
+  margin: 0 0 4px;
+  font-size: 16px;
   font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.album-card.is-expanded .album-card-info h3 {
+  font-size: 20px;
 }
 
 .album-card-meta {
-  font-size: 14px;
+  font-size: 12px;
   color: var(--muted);
+}
+
+.album-card-chevron {
+  padding: 0 14px;
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 14px;
+  user-select: none;
+}
+
+.album-card-tracks {
+  padding: 10px 12px 14px;
+  display: grid;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.album-card-tracks[hidden] {
+  display: none;
 }
 
 .album-banner {
@@ -1012,17 +1091,18 @@ audio { display: none; }
     border-radius: 12px;
   }
 
-  .album-card-cover {
-    width: 72px;
-    height: 72px;
-  }
-
-  .album-card {
-    grid-template-columns: 72px 1fr;
-  }
-
   .album-card-play {
     opacity: 1;
+  }
+
+  .album-card.is-collapsed .album-card-row {
+    grid-template-columns: 44px 1fr auto;
+    min-height: 48px;
+  }
+
+  .album-card.is-collapsed .album-card-cover {
+    width: 44px;
+    height: 44px;
   }
 
   .album-banner {
