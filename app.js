@@ -1165,34 +1165,20 @@ fetch('./albums.json?' + Date.now(), { cache: 'no-store' })
     updateListenButton();
   });
 
-// Real-time visualizer: one bright line aligned exactly with the second/album cover.
+// Real-time visualizer: one bright line aligned with the open album cover and always kept visible.
 (() => {
   const canvas = document.getElementById('audio-wave');
   const visualizer = document.getElementById('track-visualizer');
   if (!canvas || !visualizer || !audio) return;
   const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+
   let audioContext = null, analyser = null, sourceNode = null, rafId = 0;
   let freq = null, timeData = null;
 
-  const syncToCover = () => {
-    const cover = document.getElementById('album-banner-cover');
-    if (!cover) return;
-    const r = cover.getBoundingClientRect();
-    if (!r.width || !r.height) return;
-
-    // Exactly the same horizontal span as the second/album cover.
-    visualizer.style.left = `${r.left}px`;
-    visualizer.style.width = `${r.width}px`;
-    // The line is placed 15% of the cover height above the bottom of the screen.
-    visualizer.style.bottom = `${Math.max(18, r.height * 0.15)}px`;
-    // The line can rise up to roughly 25% of the cover height.
-    visualizer.style.height = `${Math.max(60, r.height * 0.25)}px`;
-    resize();
-  };
-
   const resize = () => {
     const rect = canvas.getBoundingClientRect();
-    if (!rect.width || !rect.height) return;
+    if (!rect.width || !rect.height) return false;
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     const w = Math.max(1, Math.round(rect.width * dpr));
     const h = Math.max(1, Math.round(rect.height * dpr));
@@ -1200,20 +1186,69 @@ fetch('./albums.json?' + Date.now(), { cache: 'no-store' })
       canvas.width = w;
       canvas.height = h;
     }
+    return true;
+  };
+
+  const syncToCover = () => {
+    // The cover really exists in the current DOM, but keep fallbacks so the
+    // visualizer cannot disappear if the album markup changes later.
+    const cover = document.getElementById('album-banner-cover')
+      || document.querySelector('.album-banner img')
+      || document.querySelector('.album-card-cover img');
+    const player = document.getElementById('player');
+
+    let left = 0;
+    let width = Math.min(window.innerWidth * 0.7, 900);
+
+    if (cover) {
+      const r = cover.getBoundingClientRect();
+      if (r.width > 0 && r.height > 0) {
+        left = r.left;
+        width = r.width;
+      }
+    } else {
+      // Safe fallback before an album is opened.
+      width = Math.min(window.innerWidth * 0.7, 900);
+      left = (window.innerWidth - width) / 2;
+    }
+
+    visualizer.style.left = `${Math.max(0, left)}px`;
+    visualizer.style.width = `${Math.max(1, Math.min(width, window.innerWidth))}px`;
+    visualizer.style.display = 'block';
+    visualizer.style.visibility = 'visible';
+    visualizer.style.opacity = '1';
+
+    // Keep the baseline just behind/above the fixed player. This prevents the
+    // player itself from hiding the line while retaining the requested gap.
+    if (player) {
+      const pr = player.getBoundingClientRect();
+      if (pr.height > 0) {
+        const gap = cover ? Math.max(8, cover.getBoundingClientRect().height * 0.04) : 8;
+        visualizer.style.bottom = `${Math.max(8, window.innerHeight - pr.top + gap)}px`;
+      } else {
+        visualizer.style.bottom = '42px';
+      }
+    } else {
+      const coverH = cover?.getBoundingClientRect().height || 220;
+      visualizer.style.bottom = `${Math.max(18, coverH * 0.15)}px`;
+    }
+
+    const coverH = cover?.getBoundingClientRect().height || 220;
+    visualizer.style.height = `${Math.max(70, coverH * 0.25)}px`;
+    resize();
   };
 
   const drawLine = (active = false) => {
-    resize();
+    if (!resize()) return;
     const w = canvas.width, h = canvas.height;
     if (!w || !h) return;
     ctx.clearRect(0, 0, w, h);
 
-    // Baseline at the bottom; the animation rises upward from this line.
     const base = h - Math.max(2, h * 0.025);
     const g = ctx.createLinearGradient(0, 0, w, 0);
-    g.addColorStop(0, active ? 'rgba(46,240,255,1)' : 'rgba(46,240,255,.78)');
-    g.addColorStop(.5, active ? 'rgba(190,150,255,1)' : 'rgba(190,150,255,.82)');
-    g.addColorStop(1, active ? 'rgba(255,45,145,1)' : 'rgba(255,45,145,.8)');
+    g.addColorStop(0, active ? 'rgba(46,240,255,1)' : 'rgba(46,240,255,.9)');
+    g.addColorStop(.5, active ? 'rgba(190,150,255,1)' : 'rgba(190,150,255,.92)');
+    g.addColorStop(1, active ? 'rgba(255,45,145,1)' : 'rgba(255,45,145,.9)');
 
     ctx.beginPath();
     if (!active || !analyser) {
@@ -1235,19 +1270,18 @@ fetch('./albums.json?' + Date.now(), { cache: 'no-store' })
         const amp = freq[fi] / 255;
         const sample = Math.abs(timeData[Math.floor(p * (timeData.length - 1))] / 128 - 1);
         const energy = Math.max(.035, amp * .82 + sample * .22 + bass * .8);
-        const displacement = Math.min(maxAmp, maxAmp * energy);
-        const y = base - displacement;
+        const y = base - Math.min(maxAmp, maxAmp * energy);
         if (i === 0) ctx.moveTo(0, y);
         else ctx.lineTo(p * w, y);
       }
     }
 
     ctx.strokeStyle = g;
-    ctx.lineWidth = Math.max(2.2, h * 0.025);
+    ctx.lineWidth = Math.max(2.5, h * 0.025);
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
-    ctx.shadowBlur = active ? 16 : 9;
-    ctx.shadowColor = active ? 'rgba(46,240,255,.95)' : 'rgba(46,240,255,.62)';
+    ctx.shadowBlur = active ? 18 : 11;
+    ctx.shadowColor = active ? 'rgba(46,240,255,.98)' : 'rgba(46,240,255,.7)';
     ctx.stroke();
     ctx.shadowBlur = 0;
   };
@@ -1268,11 +1302,8 @@ fetch('./albums.json?' + Date.now(), { cache: 'no-store' })
         timeData = new Uint8Array(analyser.fftSize);
       }
       if (audioContext.state === 'suspended') await audioContext.resume();
-      syncToCover();
-      if (!rafId) draw();
     } catch (err) {
       console.warn('Audio visualizer unavailable:', err);
-      drawLine(false);
     }
   };
 
@@ -1288,4 +1319,5 @@ fetch('./albums.json?' + Date.now(), { cache: 'no-store' })
   audio.addEventListener('pause', () => drawLine(false));
   window.addEventListener('resize', syncToCover, { passive: true });
   window.addEventListener('load', syncToCover, { once: true });
+  draw();
 })();

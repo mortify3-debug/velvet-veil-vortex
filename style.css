@@ -1544,26 +1544,25 @@ audio { display: none; }
 .player-art { position:relative; overflow:hidden; isolation:isolate; }
 .player-art img { position:relative; z-index:0; }
 
-/* Audio visualizer: a wide neon line aligned to the second/album cover. */
+/* Audio visualizer: one neon line, no frame/block, behind the fixed player. */
 .track-visualizer {
-  --viz-gap: 42px;
-  --viz-height: 110px;
   position: fixed;
   z-index: 39;
   left: 0;
-  top: auto;
-  bottom: var(--viz-gap);
+  bottom: 42px;
   width: 220px;
-  height: var(--viz-height);
+  height: 110px;
   margin: 0;
   transform: none;
   overflow: visible;
+  display: block;
+  visibility: visible;
+  opacity: 1;
   pointer-events: none;
   background: transparent !important;
   border: 0 !important;
   box-shadow: none !important;
   isolation: isolate;
-  opacity: 1;
 }
 .track-visualizer::before { content: none !important; }
 .audio-wave {
@@ -1572,18 +1571,11 @@ audio { display: none; }
   display: block;
   width: 100%;
   height: 100%;
-  min-height: 0;
+  min-height: 1px;
   pointer-events: none;
   opacity: 1 !important;
-  overflow: visible;
   visibility: visible !important;
-}
-
-@media(max-width:700px) {
-  .track-visualizer {
-    --viz-gap: 34px;
-    --viz-height: 90px;
-  }
+  overflow: visible;
 }
 
 @media(prefers-reduced-motion:reduce){.listen-btn:hover .listen-neon,.listen-btn:focus-visible .listen-neon{animation:none!important}.hero-smoke.active i{animation:none;opacity:.35}}
