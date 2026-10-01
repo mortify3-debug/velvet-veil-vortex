@@ -791,13 +791,13 @@ function setNav(which) {
 
 let scrollAnimId = 0;
 
-/** Eased scroll between covers; durationMs controls smoothness (higher = slower/smoother) */
-function smoothGoTo(section, durationMs = 900) {
-  if (!section || !snapMain) return;
+/** Smooth scroll to absolute Y inside snapMain */
+function smoothScrollToY(endY, durationMs = 520) {
+  if (!snapMain) return;
   const start = snapMain.scrollTop;
-  const end = section.offsetTop;
+  const end = Math.max(0, endY);
   const dist = end - start;
-  if (Math.abs(dist) < 2) {
+  if (Math.abs(dist) < 1) {
     snapMain.scrollTop = end;
     return;
   }
@@ -805,9 +805,8 @@ function smoothGoTo(section, durationMs = 900) {
   scrollLock = true;
   if (scrollAnimId) cancelAnimationFrame(scrollAnimId);
 
-  const duration = Math.max(320, Math.min(1800, durationMs));
+  const duration = Math.max(260, Math.min(900, durationMs));
   const t0 = performance.now();
-  /* smooth ease-in-out cubic */
   const ease = t => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 
   const step = now => {
@@ -824,10 +823,22 @@ function smoothGoTo(section, durationMs = 900) {
   scrollAnimId = requestAnimationFrame(step);
 }
 
+function smoothGoTo(section, durationMs = 700) {
+  if (!section || !snapMain) return;
+  smoothScrollToY(section.offsetTop, durationMs);
+}
+
 function goToMusic() {
-  smoothGoTo(musicSection, 1000);
+  coverStep = 0;
+  coverStepDir = 0;
+  smoothGoTo(musicSection, 800);
   setNav('music');
 }
+
+/* Cover step transition state (wheel notches) */
+let coverStep = 0;
+let coverStepDir = 0;
+let coverFromIdx = 0;
 
 if (snapMain) {
   const io = new IntersectionObserver(
@@ -836,12 +847,35 @@ if (snapMain) {
         if (e.isIntersecting) setNav(e.target.id === 'music' ? 'music' : 'home');
       });
     },
-    { root: snapMain, threshold: 0.5 }
+    { root: snapMain, threshold: 0.55 }
   );
   document.querySelectorAll('.cover').forEach(s => io.observe(s));
 
-  let wheelAcc = 0;
-  let wheelTimer = null;
+  /*
+   * 1st wheel notch → show ~20% of next cover
+   * 2nd notch → ~40%
+   * 3rd notch → full transition
+   * Same in reverse. Each step is eased.
+   */
+  let wheelGate = false;
+
+  const getSections = () => [...document.querySelectorAll('.cover')];
+
+  const nearestSectionIndex = () => {
+    const sections = getSections();
+    const y = snapMain.scrollTop;
+    let idx = 0;
+    let best = Infinity;
+    sections.forEach((s, i) => {
+      const d = Math.abs(s.offsetTop - y);
+      if (d < best) {
+        best = d;
+        idx = i;
+      }
+    });
+    return idx;
+  };
+
   snapMain.addEventListener(
     'wheel',
     e => {
@@ -853,42 +887,70 @@ if (snapMain) {
         if (!atTop && !atBottom) return;
         if (atBottom && e.deltaY > 0) return;
       }
-      if (scrollLock) {
-        e.preventDefault();
-        return;
-      }
-
-      /* Accumulate wheel: gentle rolls = longer/smoother transition, sharp flicks = faster */
-      wheelAcc += e.deltaY;
-      clearTimeout(wheelTimer);
-      wheelTimer = setTimeout(() => { wheelAcc = 0; }, 280);
-
-      const threshold = 28;
-      if (Math.abs(wheelAcc) < threshold) {
-        e.preventDefault();
-        return;
-      }
 
       e.preventDefault();
-      const dir = wheelAcc > 0 ? 1 : -1;
-      const intensity = Math.min(1, Math.abs(wheelAcc) / 420);
-      /* intensity 0 → ~1400ms (very smooth), 1 → ~480ms (snappy) */
-      const duration = Math.round(1400 - intensity * 920);
-      wheelAcc = 0;
+      if (scrollLock || wheelGate) return;
 
-      const sections = [...document.querySelectorAll('.cover')];
-      const y = snapMain.scrollTop;
-      let idx = 0;
-      let best = Infinity;
-      sections.forEach((s, i) => {
-        const d = Math.abs(s.offsetTop - y);
-        if (d < best) {
-          best = d;
-          idx = i;
+      const dir = e.deltaY > 0 ? 1 : e.deltaY < 0 ? -1 : 0;
+      if (!dir) return;
+
+      const sections = getSections();
+      if (sections.length < 2) return;
+
+      /* Reverse mid-transition → step back toward the other cover */
+      if (coverStep > 0 && dir !== coverStepDir) {
+        coverStep -= 1;
+        if (coverStep <= 0) {
+          coverStep = 0;
+          coverStepDir = 0;
+          smoothScrollToY(sections[coverFromIdx].offsetTop, 400);
+          wheelGate = true;
+          setTimeout(() => { wheelGate = false; }, 80);
+          return;
         }
-      });
-      const next = sections[idx + dir];
-      if (next) smoothGoTo(next, duration);
+        const from = sections[coverFromIdx];
+        const to = sections[coverFromIdx + coverStepDir];
+        if (from && to) {
+          const fraction = coverStep * 0.2;
+          smoothScrollToY(from.offsetTop + (to.offsetTop - from.offsetTop) * fraction, 400);
+        }
+        wheelGate = true;
+        setTimeout(() => { wheelGate = false; }, 80);
+        return;
+      }
+
+      if (coverStep === 0) {
+        coverFromIdx = nearestSectionIndex();
+        const targetIdx = coverFromIdx + dir;
+        if (targetIdx < 0 || targetIdx >= sections.length) return;
+        coverStepDir = dir;
+        coverStep = 1;
+      } else {
+        coverStep += 1;
+      }
+
+      const from = sections[coverFromIdx];
+      const to = sections[coverFromIdx + coverStepDir];
+      if (!from || !to) {
+        coverStep = 0;
+        coverStepDir = 0;
+        return;
+      }
+
+      wheelGate = true;
+      setTimeout(() => { wheelGate = false; }, 80);
+
+      if (coverStep >= 3) {
+        smoothScrollToY(to.offsetTop, 620);
+        coverFromIdx = coverFromIdx + coverStepDir;
+        coverStep = 0;
+        coverStepDir = 0;
+        return;
+      }
+
+      const fraction = coverStep * 0.2;
+      const targetY = from.offsetTop + (to.offsetTop - from.offsetTop) * fraction;
+      smoothScrollToY(targetY, 400);
     },
     { passive: false }
   );
