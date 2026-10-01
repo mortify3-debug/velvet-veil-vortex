@@ -457,10 +457,10 @@ body {
 }
 
 .music-panel {
-  background: rgba(8, 8, 14, 0.30);
+  background: rgba(8, 8, 14, 0.16);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border-radius: 16px;
   padding: 20px 20px 24px;
   margin-bottom: 16px;
@@ -939,9 +939,9 @@ body {
   flex-direction: column;
   gap: 10px;
   padding: 12px 16px 14px;
-  background: rgba(8, 8, 14, 0.46);
-  backdrop-filter: blur(22px);
-  -webkit-backdrop-filter: blur(22px);
+  background: rgba(8, 8, 14, 0.18);
+  backdrop-filter: blur(9px);
+  -webkit-backdrop-filter: blur(9px);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 18px;
   box-shadow: 0 10px 48px rgba(0, 0, 0, 0.55);
@@ -1547,7 +1547,7 @@ audio { display: none; }
 /* Audio visualizer: one neon line, no frame/block, behind the fixed player. */
 .track-visualizer {
   position: fixed;
-  z-index: 41;
+  z-index: 39;
   left: 0;
   bottom: 42px;
   width: 220px;

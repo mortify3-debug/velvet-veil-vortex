@@ -1206,7 +1206,7 @@ fetch('./albums.json?' + Date.now(), { cache: 'no-store' })
       const pr = player.getBoundingClientRect();
       if (pr.width > 0) {
         centerX = pr.left + pr.width / 2;
-        width = Math.min(window.innerWidth * 0.94, pr.width * 1.18);
+        width = pr.width;
       }
     }
 
@@ -1218,18 +1218,30 @@ fetch('./albums.json?' + Date.now(), { cache: 'no-store' })
     visualizer.style.visibility = 'visible';
     visualizer.style.opacity = '1';
 
-    // Place the neon waveform just above the player's top edge, like the reference.
-    // Its baseline follows the player responsively while the existing amplitude is preserved.
-    if (player) {
+    // Put the visualizer baseline exactly on the player's seek/progress line.
+    // The visualizer stays behind the player, while the transparent player
+    // lets the neon line remain visible at the same vertical level.
+    const seekTrack = document.querySelector('.seek-track');
+    if (seekTrack) {
+      const sr = seekTrack.getBoundingClientRect();
+      if (sr.width > 0 && sr.height > 0) {
+        const seekCenterY = sr.top + sr.height / 2;
+        visualizer.style.bottom = `${Math.max(0, window.innerHeight - seekCenterY)}px`;
+      } else {
+        visualizer.style.bottom = '42px';
+      }
+    } else if (player) {
       const pr = player.getBoundingClientRect();
-      visualizer.style.bottom = `${Math.max(0, window.innerHeight - pr.top + 2)}px`;
+      visualizer.style.bottom = `${Math.max(8, window.innerHeight - pr.bottom + 22)}px`;
     } else {
       const coverH = cover?.getBoundingClientRect().height || 220;
       visualizer.style.bottom = `${Math.max(18, coverH * 0.15)}px`;
     }
 
-    const coverH = cover?.getBoundingClientRect().height || 220;
-    visualizer.style.height = `${Math.max(70, coverH * 0.25)}px`;
+    // Use the full vertical space above the progress-line baseline, rather than
+    // restricting movement to a fraction of the album-cover height.
+    const baselineY = window.innerHeight - (parseFloat(visualizer.style.bottom) || 0);
+    visualizer.style.height = `${Math.max(100, baselineY - 4)}px`;
     resize();
   };
 
@@ -1256,7 +1268,7 @@ fetch('./albums.json?' + Date.now(), { cache: 'no-store' })
       const lowN = Math.max(4, Math.floor(freq.length * .045));
       for (let i = 0; i < lowN; i++) low += freq[i];
       const bass = low / lowN / 255;
-      const maxAmp = h * 0.98;
+      const maxAmp = h;
       const points = Math.max(160, Math.floor(w / 2));
 
       for (let i = 0; i <= points; i++) {
@@ -1265,7 +1277,7 @@ fetch('./albums.json?' + Date.now(), { cache: 'no-store' })
         const amp = freq[fi] / 255;
         const sample = Math.abs(timeData[Math.floor(p * (timeData.length - 1))] / 128 - 1);
         const energy = Math.max(.035, amp * .82 + sample * .22 + bass * .8);
-        const y = base - Math.min(maxAmp, maxAmp * energy);
+        const y = base - maxAmp * energy;
         if (i === 0) ctx.moveTo(0, y);
         else ctx.lineTo(p * w, y);
       }
