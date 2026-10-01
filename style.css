@@ -1544,40 +1544,44 @@ audio { display: none; }
 .player-art { position:relative; overflow:hidden; isolation:isolate; }
 .player-art img { position:relative; z-index:0; }
 
-/* Full-width waveform: deliberately separated from the tiny player thumbnail. */
+/* Minimal audio visualizer: a single transparent line behind the fixed player. */
 .track-visualizer {
-  position: relative;
-  width: 100%;
-  height: 92px;
-  min-height: 92px;
-  margin: 12px 0 14px;
-  overflow: hidden;
-  border-radius: 14px;
-  background: rgba(4, 6, 14, .96);
-  border: 1px solid rgba(46, 240, 255, .26);
-  box-shadow: inset 0 0 24px rgba(46, 240, 255, .08), 0 0 18px rgba(255,45,145,.06);
+  --viz-gap: 56px;
+  --viz-height: 120px;
+  position: fixed;
+  z-index: 30;
+  left: 0;
+  right: 0;
+  bottom: var(--viz-gap);
+  height: var(--viz-height);
+  margin: 0;
+  overflow: visible;
+  pointer-events: none;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
   isolation: isolate;
+  opacity: 1;
 }
-.track-visualizer::before {
-  content: '';
-  position: absolute;
-  left: 0; right: 0; top: 50%;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,.16), transparent);
-  z-index: 0;
-}
+.track-visualizer::before { content: none; }
 .audio-wave {
   position: absolute;
-  z-index: 1;
   inset: 0;
   display: block;
   width: 100%;
   height: 100%;
-  min-height: 92px;
+  min-height: 0;
   pointer-events: none;
   opacity: 1;
+  overflow: visible;
 }
-.track-visualizer:not(.is-active) { opacity: .92; }
+
+@media (max-width: 700px) {
+  .track-visualizer {
+    --viz-gap: 42px;
+    --viz-height: 100px;
+  }
+}
 @media(prefers-reduced-motion:reduce){.listen-btn:hover .listen-neon,.listen-btn:focus-visible .listen-neon{animation:none!important}.hero-smoke.active i{animation:none;opacity:.35}}
 
 @media (max-width: 700px) {
