@@ -532,9 +532,9 @@ body {
 .dancer-stage {
   position: sticky;
   top: 56px;
-  flex: 0 0 clamp(220px, 34vw, 360px);
-  width: clamp(220px, 34vw, 360px);
-  height: clamp(460px, 72vw, 680px);
+  flex: 0 0 clamp(180px, 28vw, 280px);
+  width: clamp(180px, 28vw, 280px);
+  height: clamp(380px, 62vw, 560px);
   display: flex;
   flex-direction: column;
   align-items: center;
