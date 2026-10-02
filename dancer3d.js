@@ -58,10 +58,15 @@ const TARGET_H = 1.55 * 1.5; // +50%
 let dragging = false;
 let lastX = 0;
 let lastY = 0;
-let lastPointerTime = 0;
-const angularVelocity = new THREE.Vector3();
-const DRAG_SPEED = 0.008;
-let userHasRotated = false;
+const DRAG_SPEED = 0.0055;
+const angularVelocity = new THREE.Vector3(); // world-space axis * radians/sec
+const dragAxis = new THREE.Vector3();
+const cameraRight = new THREE.Vector3();
+const cameraUp = new THREE.Vector3();
+const dragQuaternion = new THREE.Quaternion();
+const dragCenter = new THREE.Vector3();
+const FRICTION = 2.8;
+let lastMoveTime = 0;
 
 function resize() {
   const w = Math.max(1, stage.clientWidth || 200);
@@ -110,10 +115,10 @@ function applyMaterials(root) {
         roughness: 0.65,
         emissive: 0x000000,
         emissiveIntensity: 0,
-        side: THREE.DoubleSide,
+        side: THREE.FrontSide,
         transparent: true,
-        opacity: 0.42,
-        depthWrite: false,
+        opacity: 0.65,
+        depthWrite: true,
         envMapIntensity: 0
       });
       mat.metalnessMap = null;
@@ -154,7 +159,10 @@ function fitModel(root) {
   root.position.y -= c2.y;
   root.position.z -= c2.z;
 
-  pivot.position.set(OFFSET_X, OFFSET_Y + TARGET_H * 0.5, 0);
+  root.updateMatrixWorld(true);
+  const finalBox = new THREE.Box3().setFromObject(root);
+  const actualHeight = finalBox.max.y - finalBox.min.y;
+  pivot.position.set(OFFSET_X, OFFSET_Y + actualHeight * 0.5, 0);
 
   frameCamera(pivot);
 }
@@ -167,16 +175,17 @@ function frameCamera(target) {
   const mid = box.getCenter(new THREE.Vector3());
 
   const vFov = (camera.fov * Math.PI) / 180;
-  const fitH = sz.y * 1.2;
+  // Keep camera distance based on the pre-enlargement dimensions so 1.5x
+  // geometry is visibly larger instead of being cancelled by auto-fit.
+  const fitH = (sz.y / 1.5) * 1.2;
   const distForH = (fitH * 0.5) / Math.tan(vFov * 0.5);
-  const fitW = sz.x * 1.25;
+  const fitW = (sz.x / 1.5) * 1.4;
   const hFov = 2 * Math.atan(Math.tan(vFov * 0.5) * camera.aspect);
   const distForW = (fitW * 0.5) / Math.tan(hFov * 0.5);
-  // Keep the larger model visibly larger instead of fitting it back to its old size.
-  const dist = Math.max(distForH, distForW, 0.8) * (1 / 1.5);
+  const dist = Math.max(distForH, distForW, 2.2);
 
-  camera.position.set(mid.x, mid.y, dist);
-  camera.lookAt(mid.x, mid.y, 0);
+  camera.position.set(mid.x, mid.y, mid.z + dist);
+  camera.lookAt(mid.x, mid.y, mid.z);
   camera.updateProjectionMatrix();
 }
 
@@ -194,11 +203,11 @@ function setFallback(show) {
 function onPointerDown(e) {
   if (!ready || !pivot) return;
   dragging = true;
+  angularVelocity.set(0, 0, 0);
   lastX = e.clientX;
   lastY = e.clientY;
-  lastPointerTime = e.timeStamp;
-  angularVelocity.set(0, 0, 0);
-  canvas.setPointerCapture?.(e.pointerId);
+  lastMoveTime = performance.now();
+  stage.setPointerCapture?.(e.pointerId);
   canvas.style.cursor = 'grabbing';
   e.preventDefault();
 }
@@ -207,24 +216,26 @@ function onPointerMove(e) {
   if (!dragging || !pivot) return;
   const dx = e.clientX - lastX;
   const dy = e.clientY - lastY;
+  const now = performance.now();
+  const dt = Math.max(0.001, (now - lastMoveTime) / 1000);
   lastX = e.clientX;
   lastY = e.clientY;
+  lastMoveTime = now;
 
-  // Free orbit about the model's center, using a world-space drag axis.
-  const dt = Math.max(0.008, (e.timeStamp - lastPointerTime) / 1000);
-  lastPointerTime = e.timeStamp;
-  // Drag around camera-relative horizontal/vertical axes through the model center.
-  const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion).normalize();
-  const up = new THREE.Vector3(0, 1, 0).applyQuaternion(camera.quaternion).normalize();
-  const axis = up.clone().multiplyScalar(dx).add(right.clone().multiplyScalar(dy));
-  const angle = Math.hypot(dx, dy) * DRAG_SPEED;
-  if (angle > 0) {
-    axis.normalize();
-    const delta = new THREE.Quaternion().setFromAxisAngle(axis, angle);
-    pivot.quaternion.premultiply(delta).normalize();
-    userHasRotated = true;
-    angularVelocity.copy(axis).multiplyScalar(angle / dt);
-    if (angularVelocity.length() > 3.5) angularVelocity.setLength(3.5);
+  camera.updateMatrixWorld(true);
+  cameraRight.setFromMatrixColumn(camera.matrixWorld, 0).normalize();
+  cameraUp.setFromMatrixColumn(camera.matrixWorld, 1).normalize();
+  dragAxis.copy(cameraUp).multiplyScalar(dx)
+    .addScaledVector(cameraRight, dy);
+  const distance = Math.hypot(dx, dy);
+  if (distance > 0) {
+    dragAxis.normalize();
+    const angle = distance * DRAG_SPEED;
+    dragQuaternion.setFromAxisAngle(dragAxis, angle);
+    pivot.quaternion.premultiply(dragQuaternion).normalize();
+    angularVelocity.copy(dragAxis).multiplyScalar(angle / dt);
+    // Prevent a sharp flick from producing an unstable spin.
+    if (angularVelocity.length() > 5) angularVelocity.setLength(5);
   }
   e.preventDefault();
 }
@@ -232,16 +243,16 @@ function onPointerMove(e) {
 function onPointerUp(e) {
   if (!dragging) return;
   dragging = false;
-  canvas.releasePointerCapture?.(e.pointerId);
+  if (stage.hasPointerCapture?.(e.pointerId)) stage.releasePointerCapture(e.pointerId);
   canvas.style.cursor = 'grab';
 }
 
 canvas.style.cursor = 'grab';
+stage.style.touchAction = 'none';
 stage.addEventListener('pointerdown', onPointerDown);
-window.addEventListener('pointermove', onPointerMove);
-window.addEventListener('pointerup', onPointerUp);
-window.addEventListener('pointercancel', onPointerUp);
-window.addEventListener('blur', () => { dragging = false; canvas.style.cursor = 'grab'; });
+stage.addEventListener('pointermove', onPointerMove, { passive: false });
+stage.addEventListener('pointerup', onPointerUp);
+stage.addEventListener('pointercancel', onPointerUp);
 
 const loader = new GLTFLoader();
 loader.load(
@@ -264,17 +275,19 @@ loader.load(
 function frame() {
   requestAnimationFrame(frame);
   const dt = Math.min(0.05, clock.getDelta());
-  resize();
 
-  // Keep the last drag's rotation axis and momentum after release.
+  // Idle auto-spin before interaction; afterwards continue the user's last
+  // rotation vector with exponential friction.
   if (ready && pivot && !dragging && !reduceMotion) {
-    if (!userHasRotated && angularVelocity.lengthSq() < 0.000001) angularVelocity.set(0, SPIN_RAD_PER_SEC, 0);
-    const speed = angularVelocity.length();
-    if (speed > 0.0005) {
-      const delta = new THREE.Quaternion().setFromAxisAngle(angularVelocity.clone().normalize(), speed * dt);
-      pivot.quaternion.premultiply(delta).normalize();
-      angularVelocity.multiplyScalar(Math.exp(-0.42 * dt));
-    } else if (userHasRotated) angularVelocity.set(0, 0, 0);
+    if (angularVelocity.lengthSq() > 0.000001) {
+      const speed = angularVelocity.length();
+      dragQuaternion.setFromAxisAngle(dragAxis.copy(angularVelocity).normalize(), speed * dt);
+      pivot.quaternion.premultiply(dragQuaternion).normalize();
+      angularVelocity.multiplyScalar(Math.exp(-FRICTION * dt));
+      if (angularVelocity.lengthSq() < 0.000001) angularVelocity.set(0, 0, 0);
+    } else {
+      pivot.rotation.y += SPIN_RAD_PER_SEC * dt;
+    }
   }
 
   renderer.render(scene, camera);
