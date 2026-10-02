@@ -20,19 +20,18 @@ permissions:
 
 concurrency:
   group: pages
-  cancel-in-progress: false   # ← было true, теперь false
+  cancel-in-progress: false
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    # пропускаем запуски, инициированные самим ботом
     if: github.actor != 'github-actions[bot]'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          fetch-depth: 0    # ← нужно для корректного rebase
+          fetch-depth: 0
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -55,12 +54,12 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add songs.json
+
+          git add -A
           if git diff --cached --quiet; then
-            echo "No changes in songs.json"
+            echo "No changes to commit"
           else
             git commit -m "Update music catalog [skip ci]"
-            # ↓ ключевое: подтянуть remote и положить коммит поверх
             git pull --rebase origin main
             git push origin main
           fi
