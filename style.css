@@ -539,7 +539,7 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: flex-end;
-  pointer-events: none;
+  pointer-events: auto;
   z-index: 3;
   overflow: visible;
 }
@@ -561,6 +561,8 @@ body {
   opacity: 0;
   transition: opacity 0.35s ease;
   background: transparent;
+  cursor: grab;
+  touch-action: none;
   filter:
     drop-shadow(0 0 6px rgba(255, 255, 255, 0.4))
     drop-shadow(0 0 14px rgba(220, 235, 255, 0.28))

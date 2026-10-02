@@ -1,6 +1,6 @@
 /**
  * Velvet Veil Vortex — Neon Valkyrie
- * Force albedo texture visible (skin/clothes). No white-lamp emissive.
+ * 1.5× size, semi-transparent, auto Y-spin + drag orbit (pause spin while dragging).
  */
 import * as THREE from './assets/js/three.module.js';
 import { GLTFLoader } from './assets/js/GLTFLoader.js';
@@ -24,8 +24,7 @@ const renderer = new THREE.WebGLRenderer({
 renderer.setClearColor(0x000000, 0);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
-renderer.toneMapping = THREE.NoToneMapping; // avoid washing colors
-renderer.toneMappingExposure = 1.0;
+renderer.toneMapping = THREE.NoToneMapping;
 
 const scene = new THREE.Scene();
 
@@ -46,13 +45,21 @@ scene.add(new THREE.AmbientLight(0xffffff, 0.55));
 scene.add(new THREE.HemisphereLight(0xffffff, 0x333344, 0.4));
 
 let modelRoot = null;
+let pivot = null; // rotation around model center
 let ready = false;
 const clock = new THREE.Clock();
 const SPIN_RAD_PER_SEC = (Math.PI * 2) / 18;
 
 const OFFSET_X = -0.18;
 const OFFSET_Y = -0.12;
-const TARGET_H = 1.55;
+const TARGET_H = 1.55 * 1.5; // +50%
+
+// Drag orbit state
+let dragging = false;
+let lastX = 0;
+let lastY = 0;
+const dragEuler = new THREE.Euler(0, 0, 0, 'YXZ');
+const DRAG_SPEED = 0.0055;
 
 function resize() {
   const w = Math.max(1, stage.clientWidth || 200);
@@ -60,13 +67,9 @@ function resize() {
   renderer.setSize(w, h, false);
   camera.aspect = w / h;
   camera.updateProjectionMatrix();
-  if (ready && modelRoot) frameCamera(modelRoot);
+  if (ready && pivot) frameCamera(pivot);
 }
 
-/**
- * Rebuild materials so albedo always drives the color.
- * Meshy sets metallicFactor=1 → without env map the diffuse dies / looks wrong.
- */
 function applyMaterials(root) {
   let mapped = 0;
   let total = 0;
@@ -81,7 +84,6 @@ function applyMaterials(root) {
       total += 1;
       if (!src) return src;
 
-      // Pull maps from whatever GLTFLoader created
       const map = src.map || null;
       const normalMap = src.normalMap || null;
       if (map) {
@@ -95,7 +97,6 @@ function applyMaterials(root) {
         normalMap.needsUpdate = true;
       }
 
-      // Fresh material: diffuse texture only, zero metal, no emissive wash
       const mat = new THREE.MeshStandardMaterial({
         map,
         normalMap,
@@ -108,12 +109,11 @@ function applyMaterials(root) {
         emissive: 0x000000,
         emissiveIntensity: 0,
         side: THREE.DoubleSide,
-        transparent: false,
-        opacity: 1,
+        transparent: true,
+        opacity: 0.55,
         depthWrite: true,
         envMapIntensity: 0
       });
-      // Explicitly drop metal/rough maps from Meshy (packed oddly, fight albedo)
       mat.metalnessMap = null;
       mat.roughnessMap = null;
       mat.needsUpdate = true;
@@ -125,6 +125,11 @@ function applyMaterials(root) {
 }
 
 function fitModel(root) {
+  // Put model under a pivot at visual center for orbit + auto-spin
+  pivot = new THREE.Group();
+  scene.add(pivot);
+  pivot.add(root);
+
   root.updateMatrixWorld(true);
   const box = new THREE.Box3().setFromObject(root);
   if (box.isEmpty()) return;
@@ -134,35 +139,38 @@ function fitModel(root) {
 
   root.position.x += -center.x;
   root.position.z += -center.z;
-  root.position.y += -box.min.y;
+  root.position.y += -center.y;
 
   const maxDim = Math.max(size.x, size.y, size.z, 0.001);
   root.scale.multiplyScalar(TARGET_H / maxDim);
 
+  // After scale, keep centered on pivot
   root.updateMatrixWorld(true);
   const box2 = new THREE.Box3().setFromObject(root);
-  root.position.y -= box2.min.y;
+  const c2 = box2.getCenter(new THREE.Vector3());
+  root.position.x -= c2.x;
+  root.position.y -= c2.y;
+  root.position.z -= c2.z;
 
-  root.position.x += OFFSET_X;
-  root.position.y += OFFSET_Y;
+  pivot.position.set(OFFSET_X, OFFSET_Y + TARGET_H * 0.5, 0);
 
-  frameCamera(root);
+  frameCamera(pivot);
 }
 
-function frameCamera(root) {
-  root.updateMatrixWorld(true);
-  const box = new THREE.Box3().setFromObject(root);
+function frameCamera(target) {
+  target.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(target);
   if (box.isEmpty()) return;
   const sz = box.getSize(new THREE.Vector3());
   const mid = box.getCenter(new THREE.Vector3());
 
   const vFov = (camera.fov * Math.PI) / 180;
-  const fitH = sz.y * 1.22;
+  const fitH = sz.y * 1.2;
   const distForH = (fitH * 0.5) / Math.tan(vFov * 0.5);
-  const fitW = sz.x * 1.28;
+  const fitW = sz.x * 1.25;
   const hFov = 2 * Math.atan(Math.tan(vFov * 0.5) * camera.aspect);
   const distForW = (fitW * 0.5) / Math.tan(hFov * 0.5);
-  const dist = Math.max(distForH, distForW, 2.0);
+  const dist = Math.max(distForH, distForW, 2.2);
 
   camera.position.set(mid.x, mid.y, dist);
   camera.lookAt(mid.x, mid.y, 0);
@@ -180,12 +188,52 @@ function setFallback(show) {
   }
 }
 
+function onPointerDown(e) {
+  if (!ready || !pivot) return;
+  dragging = true;
+  lastX = e.clientX;
+  lastY = e.clientY;
+  canvas.setPointerCapture?.(e.pointerId);
+  canvas.style.cursor = 'grabbing';
+  e.preventDefault();
+}
+
+function onPointerMove(e) {
+  if (!dragging || !pivot) return;
+  const dx = e.clientX - lastX;
+  const dy = e.clientY - lastY;
+  lastX = e.clientX;
+  lastY = e.clientY;
+
+  // Orbit around center: yaw (Y) + pitch (X), clamp pitch
+  dragEuler.setFromQuaternion(pivot.quaternion, 'YXZ');
+  dragEuler.y += dx * DRAG_SPEED;
+  dragEuler.x += dy * DRAG_SPEED;
+  const lim = Math.PI / 2 - 0.08;
+  dragEuler.x = Math.max(-lim, Math.min(lim, dragEuler.x));
+  dragEuler.z = 0;
+  pivot.quaternion.setFromEuler(dragEuler);
+  e.preventDefault();
+}
+
+function onPointerUp(e) {
+  if (!dragging) return;
+  dragging = false;
+  canvas.releasePointerCapture?.(e.pointerId);
+  canvas.style.cursor = 'grab';
+}
+
+canvas.style.cursor = 'grab';
+canvas.addEventListener('pointerdown', onPointerDown);
+window.addEventListener('pointermove', onPointerMove);
+window.addEventListener('pointerup', onPointerUp);
+window.addEventListener('pointercancel', onPointerUp);
+
 const loader = new GLTFLoader();
 loader.load(
   './assets/models/neon-valkyrie.glb',
   (gltf) => {
     modelRoot = gltf.scene;
-    scene.add(modelRoot);
     fitModel(modelRoot);
     applyMaterials(modelRoot);
     ready = true;
@@ -204,8 +252,9 @@ function frame() {
   const dt = Math.min(0.05, clock.getDelta());
   resize();
 
-  if (ready && modelRoot && !reduceMotion) {
-    modelRoot.rotation.y += SPIN_RAD_PER_SEC * dt;
+  // Auto-spin around vertical axis only when not dragging
+  if (ready && pivot && !dragging && !reduceMotion) {
+    pivot.rotation.y += SPIN_RAD_PER_SEC * dt;
   }
 
   renderer.render(scene, camera);
