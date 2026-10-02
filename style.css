@@ -531,16 +531,17 @@ body {
 /* ── Audio-reactive dancer (left of track list) ── */
 .dancer-stage {
   position: sticky;
-  top: 72px;
-  flex: 0 0 clamp(140px, 22vw, 220px);
-  width: clamp(140px, 22vw, 220px);
-  height: clamp(280px, 48vw, 420px);
+  top: 56px;
+  flex: 0 0 clamp(180px, 28vw, 280px);
+  width: clamp(180px, 28vw, 280px);
+  height: clamp(380px, 62vw, 560px);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: flex-end;
   pointer-events: none;
   z-index: 3;
+  overflow: visible;
 }
 
 .dancer-wrap {
@@ -629,9 +630,10 @@ body {
     position: relative;
     top: 0;
     flex: 0 0 auto;
-    width: min(160px, 42vw);
-    height: min(300px, 72vw);
+    width: min(200px, 48vw);
+    height: min(400px, 88vw);
     margin-bottom: 8px;
+    overflow: visible;
   }
 }
 

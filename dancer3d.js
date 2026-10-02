@@ -1,7 +1,7 @@
 /**
  * Velvet Veil Vortex — Neon Valkyrie (Meshy GLB)
- * Visible over cover: transparent canvas, no scene background,
- * soft white neon, slow Y spin, semi-transparent materials.
+ * Full-body framing, textures preserved, soft white neon, slow Y spin.
+ * Transparent canvas over album cover.
  */
 import * as THREE from './assets/js/three.module.js';
 import { GLTFLoader } from './assets/js/GLTFLoader.js';
@@ -22,89 +22,103 @@ const renderer = new THREE.WebGLRenderer({
   premultipliedAlpha: false,
   powerPreference: 'high-performance'
 });
-renderer.setClearColor(0x000000, 0); // fully transparent — only model over cover
+renderer.setClearColor(0x000000, 0);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.35;
+renderer.toneMappingExposure = 1.15;
 
 const scene = new THREE.Scene();
-// no scene.background — transparent over album cover
 
-const camera = new THREE.PerspectiveCamera(28, 1, 0.05, 100);
-camera.position.set(0, 1.0, 2.35);
+// Wider FOV so full figure fits without vertical crop
+const camera = new THREE.PerspectiveCamera(38, 1, 0.05, 100);
+camera.position.set(0, 0.95, 3.2);
 camera.lookAt(0, 0.9, 0);
 
-// Bright soft white lighting so the model is readable on dark covers
-const key = new THREE.DirectionalLight(0xffffff, 2.0);
-key.position.set(2.0, 3.0, 2.5);
+const key = new THREE.DirectionalLight(0xffffff, 1.6);
+key.position.set(2.0, 3.2, 2.8);
 scene.add(key);
-const fill = new THREE.DirectionalLight(0xf0f6ff, 1.1);
-fill.position.set(-2.5, 1.5, 1.5);
+const fill = new THREE.DirectionalLight(0xf2f6ff, 0.9);
+fill.position.set(-2.5, 1.6, 1.8);
 scene.add(fill);
-const rim = new THREE.DirectionalLight(0xffffff, 1.4);
-rim.position.set(0.2, 1.8, -2.5);
+const rim = new THREE.DirectionalLight(0xffffff, 1.1);
+rim.position.set(0.2, 2.0, -2.8);
 scene.add(rim);
-scene.add(new THREE.AmbientLight(0xffffff, 0.75));
-scene.add(new THREE.HemisphereLight(0xffffff, 0x334455, 0.7));
+scene.add(new THREE.AmbientLight(0xffffff, 0.65));
+scene.add(new THREE.HemisphereLight(0xffffff, 0x2a3040, 0.55));
 
-// Tiny soft ground glow only (not a solid background plate)
 const floorMat = new THREE.MeshBasicMaterial({
   color: 0xffffff,
   transparent: true,
-  opacity: 0.07,
+  opacity: 0.06,
   depthWrite: false
 });
-const floor = new THREE.Mesh(new THREE.CircleGeometry(0.45, 32), floorMat);
+const floor = new THREE.Mesh(new THREE.CircleGeometry(0.5, 32), floorMat);
 floor.rotation.x = -Math.PI / 2;
-floor.position.y = 0.005;
+floor.position.y = 0.002;
 scene.add(floor);
 
 let modelRoot = null;
 let ready = false;
 const clock = new THREE.Clock();
-const SPIN_RAD_PER_SEC = (Math.PI * 2) / 18; // ~18s per turn
+const SPIN_RAD_PER_SEC = (Math.PI * 2) / 18;
+
+// Nudge model left & slightly down in view
+const OFFSET_X = -0.18;
+const OFFSET_Y = -0.12;
 
 function resize() {
-  const w = Math.max(1, stage.clientWidth || 180);
-  const h = Math.max(1, stage.clientHeight || 360);
+  const w = Math.max(1, stage.clientWidth || 200);
+  const h = Math.max(1, stage.clientHeight || 420);
   renderer.setSize(w, h, false);
   camera.aspect = w / h;
   camera.updateProjectionMatrix();
+  if (ready && modelRoot) frameCamera(modelRoot);
 }
 
-function applySoftNeonGlass(root) {
+function applySoftNeonKeepTextures(root) {
   root.traverse((obj) => {
     if (!obj.isMesh || !obj.material) return;
     obj.castShadow = false;
     obj.receiveShadow = false;
     obj.frustumCulled = false;
-    obj.renderOrder = 2;
 
     const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
     const next = mats.map((src) => {
       if (!src) return src;
-      // Prefer MeshStandardMaterial so emissive works
       const mat = src.clone();
 
+      // Keep maps (albedo / MR / normal) — do not wipe textures
+      // Soft glass: slight transparency + gentle white neon
       mat.transparent = true;
-      mat.opacity = 0.72;
+      mat.opacity = 0.88;
       mat.depthWrite = true;
       mat.side = THREE.DoubleSide;
-      if ('alphaTest' in mat) mat.alphaTest = 0;
 
-      // Kill pure-metal look (Meshy often exports metallicFactor=1 → black without env map)
-      if ('metalness' in mat) mat.metalness = 0.15;
-      if ('roughness' in mat) mat.roughness = 0.4;
-      if (mat.color) {
-        mat.color.multiplyScalar(1.15);
-        mat.color.lerp(new THREE.Color(0xf5f8ff), 0.12);
-      }
+      // Meshy exports metalness=1 → looks untextured/black without env map
+      if ('metalness' in mat) mat.metalness = 0.12;
+      if ('roughness' in mat) mat.roughness = 0.45;
+
+      // Don't tint base color hard — let albedo texture show
+      if (mat.color) mat.color.set(0xffffff);
+
       if ('emissive' in mat) {
-        mat.emissive = new THREE.Color(0xe8f0ff);
-        mat.emissiveIntensity = 0.35;
+        mat.emissive = new THREE.Color(0xdde6f5);
+        mat.emissiveIntensity = 0.22; // soft neon, not blown out
       }
-      if ('envMapIntensity' in mat) mat.envMapIntensity = 0.4;
+      if ('envMapIntensity' in mat) mat.envMapIntensity = 0.35;
+
+      // Ensure texture color spaces
+      if (mat.map) {
+        mat.map.colorSpace = THREE.SRGBColorSpace;
+        mat.map.needsUpdate = true;
+      }
+      if (mat.emissiveMap) {
+        mat.emissiveMap.colorSpace = THREE.SRGBColorSpace;
+      }
+      if (mat.normalMap) mat.normalMap.needsUpdate = true;
+      if (mat.metalnessMap) mat.metalnessMap.needsUpdate = true;
+      if (mat.roughnessMap) mat.roughnessMap.needsUpdate = true;
 
       mat.needsUpdate = true;
       return mat;
@@ -114,7 +128,6 @@ function applySoftNeonGlass(root) {
 }
 
 function fitModel(root) {
-  // Reset any baked transforms
   root.updateMatrixWorld(true);
   const box = new THREE.Box3().setFromObject(root);
   if (box.isEmpty()) return;
@@ -127,20 +140,40 @@ function fitModel(root) {
   root.position.y += -box.min.y;
 
   const maxDim = Math.max(size.x, size.y, size.z, 0.001);
-  const targetH = 1.75;
+  // Slightly smaller so full body + margins fit in frame
+  const targetH = 1.55;
   root.scale.multiplyScalar(targetH / maxDim);
 
   root.updateMatrixWorld(true);
   const box2 = new THREE.Box3().setFromObject(root);
   root.position.y -= box2.min.y;
 
-  // Frame camera on fitted model
-  const box3 = new THREE.Box3().setFromObject(root);
-  const sz = box3.getSize(new THREE.Vector3());
-  const mid = box3.getCenter(new THREE.Vector3());
-  const dist = Math.max(sz.y * 1.35, sz.x * 1.6, 1.8);
-  camera.position.set(0, mid.y + sz.y * 0.05, dist);
-  camera.lookAt(0, mid.y, 0);
+  // User request: a bit left and down
+  root.position.x += OFFSET_X;
+  root.position.y += OFFSET_Y;
+
+  frameCamera(root);
+}
+
+function frameCamera(root) {
+  root.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(root);
+  if (box.isEmpty()) return;
+  const sz = box.getSize(new THREE.Vector3());
+  const mid = box.getCenter(new THREE.Vector3());
+
+  // Fit full height with ~12% margin top & bottom
+  const vFov = (camera.fov * Math.PI) / 180;
+  const fitH = sz.y * 1.24;
+  const distForH = (fitH * 0.5) / Math.tan(vFov * 0.5);
+  const fitW = sz.x * 1.3;
+  const hFov = 2 * Math.atan(Math.tan(vFov * 0.5) * camera.aspect);
+  const distForW = (fitW * 0.5) / Math.tan(hFov * 0.5);
+  const dist = Math.max(distForH, distForW, 2.0);
+
+  camera.position.set(mid.x, mid.y, dist);
+  camera.lookAt(mid.x, mid.y, 0);
+  camera.updateProjectionMatrix();
 }
 
 function setFallback(show) {
@@ -161,11 +194,11 @@ loader.load(
     modelRoot = gltf.scene;
     scene.add(modelRoot);
     fitModel(modelRoot);
-    applySoftNeonGlass(modelRoot);
+    applySoftNeonKeepTextures(modelRoot);
     ready = true;
     setFallback(false);
     resize();
-    console.info('[VVV] Neon Valkyrie loaded');
+    console.info('[VVV] Neon Valkyrie loaded (textured, full-body)');
   },
   undefined,
   (err) => {
@@ -180,11 +213,12 @@ function frame() {
   resize();
 
   if (ready && modelRoot && !reduceMotion) {
+    // Spin around vertical axis through model center
     modelRoot.rotation.y += SPIN_RAD_PER_SEC * dt;
   }
 
   const e = window.__vvvEnergy || { global: 0, playing: false };
-  floorMat.opacity = 0.05 + (e.playing ? (e.global || 0) * 0.08 : 0.02);
+  floorMat.opacity = 0.04 + (e.playing ? (e.global || 0) * 0.06 : 0.02);
 
   renderer.render(scene, camera);
 }
