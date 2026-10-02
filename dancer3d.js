@@ -58,7 +58,8 @@ const TARGET_H = 1.55 * 1.5; // +50%
 let dragging = false;
 let lastX = 0;
 let lastY = 0;
-const dragEuler = new THREE.Euler(0, 0, 0, 'YXZ');
+let lastPointerTime = 0;
+const angularVelocity = new THREE.Vector3();
 const DRAG_SPEED = 0.0055;
 
 function resize() {
@@ -110,7 +111,7 @@ function applyMaterials(root) {
         emissiveIntensity: 0,
         side: THREE.DoubleSide,
         transparent: true,
-        opacity: 0.55,
+        opacity: 0.275,
         depthWrite: true,
         envMapIntensity: 0
       });
@@ -193,6 +194,8 @@ function onPointerDown(e) {
   dragging = true;
   lastX = e.clientX;
   lastY = e.clientY;
+  lastPointerTime = e.timeStamp;
+  angularVelocity.set(0, 0, 0);
   canvas.setPointerCapture?.(e.pointerId);
   canvas.style.cursor = 'grabbing';
   e.preventDefault();
@@ -205,14 +208,18 @@ function onPointerMove(e) {
   lastX = e.clientX;
   lastY = e.clientY;
 
-  // Orbit around center: yaw (Y) + pitch (X), clamp pitch
-  dragEuler.setFromQuaternion(pivot.quaternion, 'YXZ');
-  dragEuler.y += dx * DRAG_SPEED;
-  dragEuler.x += dy * DRAG_SPEED;
-  const lim = Math.PI / 2 - 0.08;
-  dragEuler.x = Math.max(-lim, Math.min(lim, dragEuler.x));
-  dragEuler.z = 0;
-  pivot.quaternion.setFromEuler(dragEuler);
+  // Free orbit about the model's center, using a world-space drag axis.
+  const dt = Math.max(0.008, (e.timeStamp - lastPointerTime) / 1000);
+  lastPointerTime = e.timeStamp;
+  const axis = new THREE.Vector3(dy, dx, 0);
+  const angle = axis.length() * DRAG_SPEED;
+  if (angle > 0) {
+    axis.normalize();
+    const delta = new THREE.Quaternion().setFromAxisAngle(axis, angle);
+    pivot.quaternion.premultiply(delta).normalize();
+    angularVelocity.set(dy / dt, dx / dt, 0).multiplyScalar(DRAG_SPEED);
+    if (angularVelocity.length() > 3.5) angularVelocity.setLength(3.5);
+  }
   e.preventDefault();
 }
 
@@ -252,9 +259,15 @@ function frame() {
   const dt = Math.min(0.05, clock.getDelta());
   resize();
 
-  // Auto-spin around vertical axis only when not dragging
+  // Keep the last drag's rotation axis and momentum after release.
   if (ready && pivot && !dragging && !reduceMotion) {
-    pivot.rotation.y += SPIN_RAD_PER_SEC * dt;
+    if (angularVelocity.lengthSq() < 0.0025) angularVelocity.set(0, SPIN_RAD_PER_SEC, 0);
+    const speed = angularVelocity.length();
+    if (speed > 0) {
+      const delta = new THREE.Quaternion().setFromAxisAngle(angularVelocity.clone().normalize(), speed * dt);
+      pivot.quaternion.premultiply(delta).normalize();
+      if (speed > SPIN_RAD_PER_SEC) angularVelocity.multiplyScalar(Math.exp(-0.72 * dt));
+    }
   }
 
   renderer.render(scene, camera);

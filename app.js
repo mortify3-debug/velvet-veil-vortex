@@ -865,6 +865,8 @@ if (snapMain) {
 
   /* One deliberate, eased scroll between covers; no intermediate wheel steps. */
   snapMain.addEventListener('wheel', e => {
+    // Ctrl/Cmd + wheel is reserved exclusively for page zoom.
+    if (e.ctrlKey || e.metaKey) return;
     const stage = e.target.closest('.music-stage');
     if (stage && stage.scrollHeight > stage.clientHeight + 4) {
       const atTop = stage.scrollTop <= 0 && e.deltaY < 0;
