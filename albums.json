@@ -72,6 +72,13 @@
         "src": "./music/%D0%93%D0%BE%D1%80%D0%BE%D0%B4%20%D1%81%D0%B2%D0%B5%D1%82%D0%B0/moy-khit.mp3"
       },
       {
+<<<<<<< Updated upstream
+=======
+        "title": "nekuda-bezhat",
+        "src": "./music/%D0%93%D0%BE%D1%80%D0%BE%D0%B4%20%D1%81%D0%B2%D0%B5%D1%82%D0%B0/nekuda-bezhat.mp3"
+      },
+      {
+>>>>>>> Stashed changes
         "title": "za-stenoy",
         "src": "./music/%D0%93%D0%BE%D1%80%D0%BE%D0%B4%20%D1%81%D0%B2%D0%B5%D1%82%D0%B0/za-stenoy.mp3"
       },
@@ -82,10 +89,13 @@
       {
         "title": "zhivoy",
         "src": "./music/%D0%93%D0%BE%D1%80%D0%BE%D0%B4%20%D1%81%D0%B2%D0%B5%D1%82%D0%B0/zhivoy.mp3"
+<<<<<<< Updated upstream
       },
       {
         "title": "Некуда бежать",
         "src": "./music/%D0%93%D0%BE%D1%80%D0%BE%D0%B4%20%D1%81%D0%B2%D0%B5%D1%82%D0%B0/%D0%9D%D0%B5%D0%BA%D1%83%D0%B4%D0%B0%20%D0%B1%D0%B5%D0%B6%D0%B0%D1%82%D1%8C.mp3"
+=======
+>>>>>>> Stashed changes
       }
     ]
   },
