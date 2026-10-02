@@ -6,7 +6,7 @@
  *   node generate-songs.mjs
  * или просто push — CI сделает это сам.
  */
-import { readdir, writeFile, mkdir } from 'node:fs/promises';
+import { readdir, writeFile, mkdir, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 
 const musicDir = './music';
@@ -92,24 +92,22 @@ const albums = [];
 
 for (const dir of albumDirs) {
   const folder = dir.name;
-  // Scan recursively so tracks are detected whether stored directly in the
-  // album folder or in subfolders (for example, Disc 1 / Disc 2).
-  async function collectAudio(dir, relative = '') {
-    const items = await readdir(dir, { withFileTypes: true });
-    const found = [];
-    for (const item of items) {
-      const rel = relative ? `${relative}/${item.name}` : item.name;
-      const full = join(dir, item.name);
-      if (item.isDirectory()) {
-        found.push(...await collectAudio(full, rel));
-      } else if (item.isFile() && audioExt.test(item.name)) {
-        found.push(rel);
-      }
-    }
-    return found;
-  }
-  const files = (await collectAudio(join(musicDir, folder)))
+  const files = (await readdir(join(musicDir, folder), { withFileTypes: true }))
+    .filter(x => x.isFile() && audioExt.test(x.name))
+    .map(x => x.name)
     .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+
+  // Fail deployment if a discovered audio file is empty or unreadable.
+  for (const name of files) {
+    const filePath = join(musicDir, folder, name);
+    const info = await stat(filePath);
+    if (!info.isFile() || info.size === 0) {
+      throw new Error(`Invalid or empty audio file: ${filePath}`);
+    }
+  }
+  if (files.length === 0) {
+    console.warn(`WARNING: album folder has no audio files: music/${folder}`);
+  }
 
   albums.push({
     id: folder.toLowerCase().replace(/\s+/g, '-'),
@@ -119,7 +117,7 @@ for (const dir of albumDirs) {
     folder,
     tracks: files.map(name => ({
       title: makeTitle(name),
-      src: `./music/${encodePath(folder, ...name.split('/'))}`
+      src: `./music/${encodePath(folder, name)}`
     }))
   });
 }
@@ -137,6 +135,7 @@ const flat = albums.flatMap(a =>
 await writeFile('./songs.json', JSON.stringify(flat, null, 2) + '\n');
 
 console.log(`albums.json: ${albums.length} album(s)`);
+console.log(`songs.json: ${flat.length} track(s)`);
 for (const a of albums) {
   console.log(`  - ${a.title}: ${a.tracks.length} track(s), cover=${a.cover}`);
 }
