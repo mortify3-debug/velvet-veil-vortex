@@ -89,7 +89,16 @@
           <p class="slogan-en slogan-neon-bright">Рок не спрашивает. Рок звучит!</p>
         </div>
 
-        <div class="music-panel">
+        <div class="music-layout">
+          <aside class="dancer-stage" id="dancer-stage" aria-label="Танцующая визуализация">
+            <div class="dancer-wrap" id="dancer-wrap">
+              <img class="dancer-img" id="dancer-img" src="./assets/dancer-neon.jpg" alt="Киберпанк-девушка" decoding="async">
+              <div class="dancer-glow" aria-hidden="true"></div>
+            </div>
+            <div class="dancer-floor" aria-hidden="true"></div>
+          </aside>
+
+          <div class="music-panel">
           <div class="section-head">
             <h3 id="music-heading">АЛЬБОМЫ</h3>
             <button type="button" class="back-btn" id="back-btn" hidden>← АЛЬБОМЫ</button>
@@ -111,6 +120,7 @@
           </div>
 
           <div id="empty" class="empty" hidden>Добавьте альбомы в <b>albums.json</b></div>
+          </div>
         </div>
 
         <footer class="site-footer">

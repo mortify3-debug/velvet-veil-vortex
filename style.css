@@ -473,7 +473,7 @@ body {
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
   padding: 64px 4vw 20px;
-  max-width: 936px; /* ~30% wider than 720 for desktop lists */
+  max-width: 1100px; /* room for dancer + list */
   width: 100%;
   margin: 0 auto;
   scrollbar-width: none; /* Firefox */
@@ -509,6 +509,13 @@ body {
   color: #ffffff;
 }
 
+.music-layout {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  width: 100%;
+}
+
 .music-panel {
   background: rgba(8, 8, 14, 0.16);
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -517,6 +524,88 @@ body {
   border-radius: 16px;
   padding: 20px 20px 24px;
   margin-bottom: 16px;
+  flex: 1;
+  min-width: 0;
+}
+
+/* ── Audio-reactive dancer (left of track list) ── */
+.dancer-stage {
+  position: sticky;
+  top: 72px;
+  flex: 0 0 clamp(140px, 22vw, 220px);
+  width: clamp(140px, 22vw, 220px);
+  height: clamp(280px, 48vw, 420px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.dancer-wrap {
+  position: relative;
+  width: 100%;
+  height: 92%;
+  transform-origin: 50% 100%;
+  will-change: transform;
+}
+
+.dancer-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center bottom;
+  filter:
+    drop-shadow(0 0 6px rgba(255, 255, 255, 0.35))
+    drop-shadow(0 0 14px rgba(220, 235, 255, 0.22))
+    drop-shadow(0 0 28px rgba(180, 210, 255, 0.12));
+  -webkit-user-drag: none;
+  user-select: none;
+}
+
+.dancer-glow {
+  position: absolute;
+  inset: auto 8% 0;
+  height: 28%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0.18), transparent 70%);
+  pointer-events: none;
+  opacity: 0.55;
+  filter: blur(8px);
+}
+
+.dancer-floor {
+  width: 72%;
+  height: 10px;
+  margin-top: -4px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0.16), transparent 70%);
+  filter: blur(4px);
+  opacity: 0.5;
+}
+
+@media (max-width: 820px) {
+  .music-layout {
+    flex-direction: column;
+    align-items: center;
+  }
+  .dancer-stage {
+    position: relative;
+    top: 0;
+    flex: 0 0 auto;
+    width: min(160px, 42vw);
+    height: min(300px, 72vw);
+    margin-bottom: 8px;
+  }
+}
+
+@media (max-width: 520px) {
+  .dancer-stage {
+    width: min(120px, 36vw);
+    height: min(230px, 58vw);
+  }
 }
 
 .section-head {

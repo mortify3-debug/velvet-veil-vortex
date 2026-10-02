@@ -1258,6 +1258,17 @@ fetch('./albums.json?' + Date.now(), { cache: 'no-store' })
         for (let i = 0; i < smoothEnergy.length; i++) smoothEnergy[i] *= 0.92;
       }
       lastGlobal *= 0.9;
+      try {
+        window.__vvvEnergy = {
+          global: lastGlobal,
+          bass: 0,
+          mid: 0,
+          high: 0,
+          transient: 0,
+          activity: 0,
+          playing: false
+        };
+      } catch (_) {}
     } else {
       analyser.getByteFrequencyData(freq);
       analyser.getByteTimeDomainData(timeData);
@@ -1304,6 +1315,19 @@ fetch('./albums.json?' + Date.now(), { cache: 'no-store' })
       // Gate factor: almost flat when quiet, expressive when loud / transient
       const activity = Math.min(1, lastGlobal * 0.85 + transient * 0.55);
       const floor = 0.04; // tiny residual so line never completely dies
+
+      // Share energy with the dancer visual (bass + activity + transient)
+      try {
+        window.__vvvEnergy = {
+          global: lastGlobal,
+          bass: Math.min(1, bassAvg / 160),
+          mid: Math.min(1, midAvg / 140),
+          high: Math.min(1, highAvg / 120),
+          transient,
+          activity,
+          playing: !audio.paused
+        };
+      } catch (_) {}
 
       for (let i = 0; i <= points; i++) {
         const p = i / points;
@@ -1375,4 +1399,104 @@ fetch('./albums.json?' + Date.now(), { cache: 'no-store' })
   window.addEventListener('resize', syncToCover, { passive: true });
   window.addEventListener('load', syncToCover, { once: true });
   draw();
+})();
+
+// Audio-reactive dancer: image + soft neon, driven by shared analyser energy.
+// Modes: idle stand, tired squat (after loud/fast track), slow sway, rock bounce/turn.
+(() => {
+  const wrap = document.getElementById('dancer-wrap');
+  if (!wrap || !audio) return;
+
+  let t0 = performance.now();
+  let lastPeakEnergy = 0;
+  let peakHold = 0;
+  let wasPlaying = false;
+  let mode = 'idle';
+  let phase = 0;
+
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const tick = (now) => {
+    requestAnimationFrame(tick);
+    if (reduceMotion) {
+      wrap.style.transform = 'translateY(0) rotate(0deg) scale(1)';
+      return;
+    }
+
+    const e = window.__vvvEnergy || {
+      global: 0, bass: 0, mid: 0, high: 0, transient: 0, activity: 0, playing: false
+    };
+    const playing = !!e.playing && !audio.paused;
+    const dt = Math.min(0.05, (now - t0) / 1000 || 0.016);
+    t0 = now;
+
+    let y = 0, rot = 0, sx = 1, sy = 1, x = 0;
+
+    if (playing) {
+      wasPlaying = true;
+      const energy = Math.max(e.global || 0, e.activity || 0);
+      peakHold = Math.max(peakHold * 0.985, energy);
+      lastPeakEnergy = Math.max(lastPeakEnergy * 0.998, energy);
+
+      const isRock = energy > 0.38 || (e.bass || 0) > 0.48;
+      mode = isRock ? 'rock' : 'slow';
+
+      // Tempo from energy: rock faster phase, slow gentler
+      const tempo = isRock ? (3.2 + energy * 4.5) : (1.1 + energy * 1.6);
+      phase += dt * tempo * Math.PI * 2;
+
+      const swing = Math.sin(phase);
+      const swing2 = Math.sin(phase * 2);
+      const kick = Math.max(0, Math.sin(phase * 2)); // upward bias on beats
+
+      if (isRock) {
+        // Rock: jumps, stronger turns, leg-like squash
+        y = -8 - kick * (10 + (e.bass || 0) * 16) - (e.transient || 0) * 14;
+        rot = swing * (6 + energy * 8) + ((e.high || 0) - 0.25) * 5;
+        x = swing2 * (4 + energy * 6);
+        sx = 1 + (e.bass || 0) * 0.06 - kick * 0.03;
+        sy = 1 - (e.bass || 0) * 0.05 + kick * 0.04;
+      } else {
+        // Slow: arms/hips style sway, soft bounce
+        y = -3 - Math.abs(swing) * (4 + energy * 8) - (e.transient || 0) * 6;
+        rot = swing * (4 + energy * 5);
+        x = swing * (3 + energy * 4);
+        sx = 1 + energy * 0.02;
+        sy = 1 - energy * 0.015;
+      }
+    } else {
+      phase += dt * 0.6;
+      const breath = Math.sin(phase);
+
+      if (wasPlaying && lastPeakEnergy > 0.36) {
+        mode = 'tired';
+        // Tired squat / lean after loud track
+        y = 12 + breath * 1.5;
+        rot = -2.5 + breath * 0.8;
+        sx = 0.97;
+        sy = 0.93 + breath * 0.008;
+        peakHold *= 0.97;
+        if (peakHold < 0.07) {
+          lastPeakEnergy *= 0.92;
+          if (lastPeakEnergy < 0.14) {
+            wasPlaying = false;
+            mode = 'idle';
+          }
+        }
+      } else {
+        mode = 'idle';
+        y = breath * 2.5;
+        rot = breath * 0.6;
+        sx = 1 + breath * 0.008;
+        sy = 1;
+        lastPeakEnergy *= 0.96;
+      }
+    }
+
+    wrap.dataset.mode = mode;
+    wrap.style.transform =
+      `translate(${x.toFixed(2)}px, ${y.toFixed(2)}px) rotate(${rot.toFixed(2)}deg) scale(${sx.toFixed(3)}, ${sy.toFixed(3)})`;
+  };
+
+  requestAnimationFrame(tick);
 })();
