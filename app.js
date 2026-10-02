@@ -1501,3 +1501,60 @@ fetch('./albums.json?' + Date.now(), { cache: 'no-store' })
 
   requestAnimationFrame(tick);
 })();
+
+/* ── Site scale (Ctrl + mouse wheel / Ctrl + ± / Ctrl + 0) ── */
+(function initSiteZoom() {
+  const root = document.getElementById('snap-main') || document.body;
+  const MIN = 0.7;
+  const MAX = 1.45;
+  const STEP = 0.08;
+  let scale = 1;
+
+  try {
+    const saved = parseFloat(sessionStorage.getItem('vvv-site-scale') || '');
+    if (saved >= MIN && saved <= MAX) scale = saved;
+  } catch (_) {}
+
+  const apply = () => {
+    root.style.transformOrigin = 'center top';
+    root.style.transform = scale === 1 ? '' : `scale(${scale})`;
+    root.style.width = scale === 1 ? '' : `${(100 / scale).toFixed(3)}%`;
+    root.dataset.siteScale = scale.toFixed(2);
+    try { sessionStorage.setItem('vvv-site-scale', String(scale)); } catch (_) {}
+    // Help layout after scale (visualizer / 3D resize listeners)
+    window.dispatchEvent(new Event('resize'));
+  };
+
+  const setScale = (next) => {
+    scale = Math.min(MAX, Math.max(MIN, Math.round(next * 100) / 100));
+    apply();
+  };
+
+  // Ctrl + wheel (does not fight cover snap: that ignores ctrlKey paths if any)
+  window.addEventListener(
+    'wheel',
+    (e) => {
+      if (!e.ctrlKey && !e.metaKey) return;
+      e.preventDefault();
+      const dir = e.deltaY > 0 ? -1 : 1;
+      setScale(scale + dir * STEP);
+    },
+    { passive: false }
+  );
+
+  window.addEventListener('keydown', (e) => {
+    if (!(e.ctrlKey || e.metaKey)) return;
+    if (e.key === '=' || e.key === '+') {
+      e.preventDefault();
+      setScale(scale + STEP);
+    } else if (e.key === '-' || e.key === '_') {
+      e.preventDefault();
+      setScale(scale - STEP);
+    } else if (e.key === '0') {
+      e.preventDefault();
+      setScale(1);
+    }
+  });
+
+  apply();
+})();

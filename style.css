@@ -1768,3 +1768,10 @@ audio { display: none; }
 
 @media(prefers-reduced-motion:reduce){.listen-btn:hover .listen-neon,.listen-btn:focus-visible .listen-neon{animation:none!important}.hero-smoke.active i{animation:none;opacity:.35}}
 
+
+
+/* Site scale (Ctrl + wheel) */
+#snap-main {
+  transform-origin: center top;
+  will-change: transform;
+}
