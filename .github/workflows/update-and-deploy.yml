@@ -9,12 +9,14 @@ on:
       - 'style.css'
       - 'app.js'
       - 'assets/**'
+      - 'albums.json'
+      - 'songs.json'
       - 'generate-songs.mjs'
       - '.github/workflows/update-and-deploy.yml'
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
   pages: write
   id-token: write
 
@@ -25,51 +27,26 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    if: github.actor != 'github-actions[bot]'
     steps:
       - name: Checkout
         uses: actions/checkout@v5
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          fetch-depth: 0
 
       - name: Setup Node
         uses: actions/setup-node@v5
         with:
           node-version: 22
 
-      - name: Generate songs.json
+      - name: Generate music catalog from repository files
         run: node generate-songs.mjs
 
-      - name: Verify files
+      - name: Verify generated catalog
         run: |
           test -f index.html
+          test -f albums.json
           test -f songs.json
-          echo '--- songs.json ---'
-          cat songs.json
-          echo '--- MP3 files ---'
-          find music -type f \( -iname '*.mp3' -o -iname '*.m4a' -o -iname '*.ogg' -o -iname '*.wav' \) -printf '%P\n' || true
-
-      - name: Commit generated songs.json
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          # 1. СНАЧАЛА синхронизация с remote.
-          #    --autostash сам спрячет и вернёт незакоммиченные изменения,
-          #    поэтому дерево может быть грязным — pull не упадёт.
-          git pull --rebase --autostash origin main
-
-          # 2. ТЕПЕРЬ коммитим то, что нагенерили.
-          git add -A
-          if git diff --cached --quiet; then
-            echo "No changes to commit"
-            exit 0
-          fi
-          git commit -m "Update music catalog [skip ci]"
-
-          # 3. И пушим. Rebase уже сделан, конфликтов не будет.
-          git push origin main
+          node --input-type=module -e "import fs from 'node:fs'; for (const f of ['albums.json','songs.json']) JSON.parse(fs.readFileSync(f,'utf8')); console.log('Music catalog JSON is valid')"
+          echo 'Audio files found:'
+          find music -type f \( -iname '*.mp3' -o -iname '*.m4a' -o -iname '*.ogg' -o -iname '*.wav' \) -print || true
 
       - name: Configure Pages
         uses: actions/configure-pages@v6
