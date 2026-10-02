@@ -23,10 +23,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 22
 
@@ -42,20 +42,22 @@ jobs:
             echo "No catalog changes"
           else
             git commit -m "chore: update music catalog [skip ci]" || true
-            git push || true
+            git push || echo "Push skipped or failed (non-fatal)"
           fi
 
       - name: Verify site files
         run: |
           test -f index.html
           test -f albums.json
-          find music -type f -iname '*.mp3' | head
+          echo "Albums:"
+          node -e "console.log(JSON.parse(require('fs').readFileSync('albums.json','utf8')).map(a=>a.title+': '+a.tracks.length+' tracks').join('\n'))"
+          find music -type f -iname '*.mp3' | head -20 || true
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v4
         with:
           path: .
 

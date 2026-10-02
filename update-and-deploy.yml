@@ -18,8 +18,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
       - name: Generate albums from music/ folders
@@ -29,12 +29,14 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add albums.json songs.json
-          if git diff --cached --quiet; then echo "No changes"; else
+          if git diff --cached --quiet; then
+            echo "No changes"
+          else
             git commit -m "chore: update music catalog [skip ci]"
-            git push || true
+            git push || echo "Push skipped or failed (non-fatal)"
           fi
       - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v4
         with:
           path: .
   deploy:
