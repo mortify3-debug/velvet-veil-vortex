@@ -228,7 +228,7 @@ body {
 
 /* White neon script slogans — softer glow */
 .slogan-neon {
-  font-family: 'Marck Script', cursive, Georgia, serif;
+  font-family: cursive, 'Segoe Script', 'Apple Chancery', 'Comic Sans MS', Georgia, serif;
   font-size: clamp(26px, 5.2vw, 44px);
   font-weight: 400;
   font-style: normal;
@@ -249,7 +249,7 @@ body {
 }
 
 .slogan-neon-bright {
-  font-family: 'Marck Script', cursive, Georgia, serif;
+  font-family: cursive, 'Segoe Script', 'Apple Chancery', 'Comic Sans MS', Georgia, serif;
   font-size: clamp(18px, 3.4vw, 30px);
   font-weight: 400;
   font-style: normal;
