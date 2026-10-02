@@ -532,9 +532,9 @@ body {
 .dancer-stage {
   position: sticky;
   top: 56px;
-  flex: 0 0 clamp(180px, 28vw, 280px);
-  width: clamp(180px, 28vw, 280px);
-  height: clamp(380px, 62vw, 560px);
+  flex: 0 0 clamp(220px, 34vw, 360px);
+  width: clamp(220px, 34vw, 360px);
+  height: clamp(460px, 72vw, 680px);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -562,8 +562,9 @@ body {
   transition: opacity 0.35s ease;
   background: transparent;
   filter:
-    drop-shadow(0 0 8px rgba(255, 255, 255, 0.35))
-    drop-shadow(0 0 20px rgba(220, 235, 255, 0.2));
+    drop-shadow(0 0 6px rgba(255, 255, 255, 0.4))
+    drop-shadow(0 0 14px rgba(220, 235, 255, 0.28))
+    drop-shadow(0 0 28px rgba(200, 220, 255, 0.12));
 }
 .dancer-stage,
 .dancer-wrap {
