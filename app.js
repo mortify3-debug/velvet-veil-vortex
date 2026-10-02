@@ -1401,11 +1401,12 @@ fetch('./albums.json?' + Date.now(), { cache: 'no-store' })
   draw();
 })();
 
-// Audio-reactive dancer: image + soft neon, driven by shared analyser energy.
-// Modes: idle stand, tired squat (after loud/fast track), slow sway, rock bounce/turn.
+// 2D fallback motion only if 3D dancer module is unavailable.
 (() => {
   const wrap = document.getElementById('dancer-wrap');
+  const canvas3d = document.getElementById('dancer-canvas');
   if (!wrap || !audio) return;
+  if (canvas3d) return; // Three.js layer (dancer3d.js) owns motion
 
   let t0 = performance.now();
   let lastPeakEnergy = 0;

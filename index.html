@@ -90,9 +90,10 @@
         </div>
 
         <div class="music-layout">
-          <aside class="dancer-stage" id="dancer-stage" aria-label="Танцующая визуализация">
+          <aside class="dancer-stage" id="dancer-stage" aria-label="3D танцующая визуализация">
             <div class="dancer-wrap" id="dancer-wrap">
-              <img class="dancer-img" id="dancer-img" src="./assets/dancer-neon.jpg" alt="Киберпанк-девушка" decoding="async">
+              <canvas id="dancer-canvas" class="dancer-canvas" aria-hidden="true"></canvas>
+              <img class="dancer-img dancer-fallback" id="dancer-img" src="./assets/dancer-neon.jpg" alt="Киберпанк-девушка" decoding="async">
               <div class="dancer-glow" aria-hidden="true"></div>
             </div>
             <div class="dancer-floor" aria-hidden="true"></div>
@@ -181,5 +182,14 @@
   </div>
 
   <script src="./app.js"></script>
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+    }
+  }
+  </script>
+  <script type="module" src="./dancer3d.js"></script>
 </body>
 </html>
