@@ -48,7 +48,7 @@ jobs:
           echo '--- songs.json ---'
           cat songs.json
           echo '--- MP3 files ---'
-          find music -maxdepth 1 -type f \( -iname '*.mp3' -o -iname '*.m4a' -o -iname '*.ogg' -o -iname '*.wav' \) -printf '%f\n' || true
+          find music -type f \( -iname '*.mp3' -o -iname '*.m4a' -o -iname '*.ogg' -o -iname '*.wav' \) -printf '%P\n' || true
 
       - name: Commit generated songs.json
         run: |
