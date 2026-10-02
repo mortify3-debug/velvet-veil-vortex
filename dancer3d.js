@@ -1,6 +1,6 @@
 /**
  * Velvet Veil Vortex — Neon Valkyrie
- * Show real texture colors (skin, clothes). Soft glow does not wash them out.
+ * Force albedo texture visible (skin/clothes). No white-lamp emissive.
  */
 import * as THREE from './assets/js/three.module.js';
 import { GLTFLoader } from './assets/js/GLTFLoader.js';
@@ -24,8 +24,8 @@ const renderer = new THREE.WebGLRenderer({
 renderer.setClearColor(0x000000, 0);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.05;
+renderer.toneMapping = THREE.NoToneMapping; // avoid washing colors
+renderer.toneMappingExposure = 1.0;
 
 const scene = new THREE.Scene();
 
@@ -33,18 +33,17 @@ const camera = new THREE.PerspectiveCamera(38, 1, 0.05, 100);
 camera.position.set(0, 0.95, 3.2);
 camera.lookAt(0, 0.9, 0);
 
-// Balanced lights — enough to read color, not bleach
-const key = new THREE.DirectionalLight(0xffffff, 1.15);
-key.position.set(1.8, 2.8, 2.4);
+const key = new THREE.DirectionalLight(0xffffff, 1.2);
+key.position.set(1.6, 2.6, 2.2);
 scene.add(key);
-const fill = new THREE.DirectionalLight(0xeef2f8, 0.5);
-fill.position.set(-2.0, 1.3, 1.4);
+const fill = new THREE.DirectionalLight(0xffffff, 0.55);
+fill.position.set(-2.0, 1.2, 1.5);
 scene.add(fill);
-const rim = new THREE.DirectionalLight(0xffffff, 0.85);
-rim.position.set(-0.2, 1.6, -2.5);
+const rim = new THREE.DirectionalLight(0xffffff, 0.6);
+rim.position.set(0, 1.5, -2.4);
 scene.add(rim);
-scene.add(new THREE.AmbientLight(0xffffff, 0.4));
-scene.add(new THREE.HemisphereLight(0xf8f9fc, 0x22252e, 0.35));
+scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+scene.add(new THREE.HemisphereLight(0xffffff, 0x333344, 0.4));
 
 let modelRoot = null;
 let ready = false;
@@ -65,11 +64,12 @@ function resize() {
 }
 
 /**
- * Keep albedo / normal / MR maps.
- * Soft neon only as a very weak emissive so colors stay visible.
- * Glow mainly comes from CSS drop-shadow on the canvas.
+ * Rebuild materials so albedo always drives the color.
+ * Meshy sets metallicFactor=1 → without env map the diffuse dies / looks wrong.
  */
 function applyMaterials(root) {
+  let mapped = 0;
+  let total = 0;
   root.traverse((obj) => {
     if (!obj.isMesh || !obj.material) return;
     obj.castShadow = false;
@@ -78,46 +78,50 @@ function applyMaterials(root) {
 
     const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
     const next = mats.map((src) => {
+      total += 1;
       if (!src) return src;
-      const mat = src.clone();
 
-      mat.transparent = false;
-      mat.opacity = 1;
-      mat.depthWrite = true;
-      mat.side = THREE.DoubleSide;
-
-      // Meshy often sets metalness=1 → texture looks grey/white without env map
-      if ('metalness' in mat) mat.metalness = 0.05;
-      if ('roughness' in mat) mat.roughness = 0.6;
-
-      // Base color white multiplier so the TEXTURE colors show as authored
-      if (mat.color) mat.color.setRGB(1, 1, 1);
-
-      // Tiny soft neon — does not cover skin/clothes
-      if ('emissive' in mat) {
-        mat.emissive = new THREE.Color(0xc8d4e8);
-        mat.emissiveIntensity = 0.06;
+      // Pull maps from whatever GLTFLoader created
+      const map = src.map || null;
+      const normalMap = src.normalMap || null;
+      if (map) {
+        map.colorSpace = THREE.SRGBColorSpace;
+        map.flipY = false;
+        map.needsUpdate = true;
+        mapped += 1;
       }
-      if ('envMapIntensity' in mat) mat.envMapIntensity = 0.2;
-
-      if (mat.map) {
-        mat.map.colorSpace = THREE.SRGBColorSpace;
-        mat.map.anisotropy = 4;
-        mat.map.needsUpdate = true;
-      }
-      if (mat.normalMap) mat.normalMap.needsUpdate = true;
-      if (mat.metalnessMap) mat.metalnessMap.needsUpdate = true;
-      if (mat.roughnessMap) mat.roughnessMap.needsUpdate = true;
-      // Don't use metalnessMap as strong metal if it washes colors
-      if (mat.metalnessMap) {
-        mat.metalness = 0.05;
+      if (normalMap) {
+        normalMap.colorSpace = THREE.NoColorSpace;
+        normalMap.needsUpdate = true;
       }
 
+      // Fresh material: diffuse texture only, zero metal, no emissive wash
+      const mat = new THREE.MeshStandardMaterial({
+        map,
+        normalMap,
+        normalScale: src.normalScale
+          ? src.normalScale.clone()
+          : new THREE.Vector2(1, 1),
+        color: 0xffffff,
+        metalness: 0,
+        roughness: 0.65,
+        emissive: 0x000000,
+        emissiveIntensity: 0,
+        side: THREE.DoubleSide,
+        transparent: false,
+        opacity: 1,
+        depthWrite: true,
+        envMapIntensity: 0
+      });
+      // Explicitly drop metal/rough maps from Meshy (packed oddly, fight albedo)
+      mat.metalnessMap = null;
+      mat.roughnessMap = null;
       mat.needsUpdate = true;
       return mat;
     });
     obj.material = next.length === 1 ? next[0] : next;
   });
+  console.info('[VVV] materials with albedo map:', mapped, '/', total);
 }
 
 function fitModel(root) {
@@ -187,7 +191,6 @@ loader.load(
     ready = true;
     setFallback(false);
     resize();
-    console.info('[VVV] Neon Valkyrie: texture colors visible');
   },
   undefined,
   (err) => {
