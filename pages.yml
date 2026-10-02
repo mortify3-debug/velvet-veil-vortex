@@ -1,0 +1,64 @@
+name: Deploy Velvet Veil Vortex
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Generate music catalog from folders
+        run: node generate-songs.mjs
+
+      - name: Commit catalog if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add albums.json songs.json || true
+          if git diff --cached --quiet; then
+            echo "No catalog changes"
+          else
+            git commit -m "chore: update music catalog [skip ci]" || true
+            git push || true
+          fi
+
+      - name: Verify site files
+        run: |
+          test -f index.html
+          test -f albums.json
+          find music -type f -iname '*.mp3' | head
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
