@@ -20,16 +20,19 @@ permissions:
 
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false   # ← было true, теперь false
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    # пропускаем запуски, инициированные самим ботом
+    if: github.actor != 'github-actions[bot]'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0    # ← нужно для корректного rebase
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -57,7 +60,9 @@ jobs:
             echo "No changes in songs.json"
           else
             git commit -m "Update music catalog [skip ci]"
-            git push
+            # ↓ ключевое: подтянуть remote и положить коммит поверх
+            git pull --rebase origin main
+            git push origin main
           fi
 
       - name: Configure Pages
