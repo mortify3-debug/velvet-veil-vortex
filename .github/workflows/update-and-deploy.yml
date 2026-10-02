@@ -55,14 +55,21 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
+          # 1. СНАЧАЛА синхронизация с remote.
+          #    --autostash сам спрячет и вернёт незакоммиченные изменения,
+          #    поэтому дерево может быть грязным — pull не упадёт.
+          git pull --rebase --autostash origin main
+
+          # 2. ТЕПЕРЬ коммитим то, что нагенерили.
           git add -A
           if git diff --cached --quiet; then
             echo "No changes to commit"
-          else
-            git commit -m "Update music catalog [skip ci]"
-            git pull --rebase origin main
-            git push origin main
+            exit 0
           fi
+          git commit -m "Update music catalog [skip ci]"
+
+          # 3. И пушим. Rebase уже сделан, конфликтов не будет.
+          git push origin main
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
