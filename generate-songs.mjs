@@ -92,9 +92,23 @@ const albums = [];
 
 for (const dir of albumDirs) {
   const folder = dir.name;
-  const files = (await readdir(join(musicDir, folder), { withFileTypes: true }))
-    .filter(x => x.isFile() && audioExt.test(x.name))
-    .map(x => x.name)
+  // Scan recursively so tracks are detected whether stored directly in the
+  // album folder or in subfolders (for example, Disc 1 / Disc 2).
+  async function collectAudio(dir, relative = '') {
+    const items = await readdir(dir, { withFileTypes: true });
+    const found = [];
+    for (const item of items) {
+      const rel = relative ? `${relative}/${item.name}` : item.name;
+      const full = join(dir, item.name);
+      if (item.isDirectory()) {
+        found.push(...await collectAudio(full, rel));
+      } else if (item.isFile() && audioExt.test(item.name)) {
+        found.push(rel);
+      }
+    }
+    return found;
+  }
+  const files = (await collectAudio(join(musicDir, folder)))
     .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
 
   albums.push({
@@ -105,7 +119,7 @@ for (const dir of albumDirs) {
     folder,
     tracks: files.map(name => ({
       title: makeTitle(name),
-      src: `./music/${encodePath(folder, name)}`
+      src: `./music/${encodePath(folder, ...name.split('/'))}`
     }))
   });
 }
