@@ -33,10 +33,31 @@ node generate-songs.mjs
 3. Обложку — в `assets/covers/` (имя файла ≈ название альбома)
 4. Push (или `node generate-songs.mjs`)
 
-## Cloudflare Pages
+## Cloudflare (Workers Builds)
+
+**Правильные настройки в Cloudflare Dashboard → Builds:**
+
+- **Build command:** `npm run build`  
+  (или `node generate-songs.mjs && node build.mjs`)
+- **Deploy command:** `npx wrangler deploy`
+- **Root directory:** оставьте пустым
+
+В проекте уже есть всё необходимое:
+- `wrangler.jsonc` — assets.directory = `./dist`
+- `build.mjs` — копирует только нужные файлы в `dist/` (без node_modules)
+- `.assetsignore` и `.gitignore` — защита от случайной загрузки тяжёлых файлов
+- `package.json` — скрипты generate / build / deploy
+
+Это полностью решает ошибку:
+
+```
+Asset too large. ... node_modules/workerd/bin/workerd ... 128 MiB
+```
+
+### Если используете классический Cloudflare Pages
 
 - Build command: `node generate-songs.mjs`
-- Output directory: `/`
+- Build output directory: `/`
 
 ## Управление
 
