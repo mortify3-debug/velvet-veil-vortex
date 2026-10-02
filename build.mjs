@@ -26,6 +26,7 @@ for (const f of [
   'index.html',
   'style.css',
   'app.js',
+  'dancer3d.js',
   'albums.json',
   'songs.json',
   '_headers',
@@ -36,6 +37,7 @@ for (const f of [
 
 await copyIfExists('assets');
 await copyIfExists('music');
+await copyIfExists('vendor');
 
 await writeFile(path.join(dist, '.nojekyll'), '');
 console.log('Build completed → dist/');

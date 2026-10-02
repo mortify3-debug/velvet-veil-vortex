@@ -3,8 +3,8 @@
  * Visible over cover: transparent canvas, no scene background,
  * soft white neon, slow Y spin, semi-transparent materials.
  */
-import * as THREE from './vendor/three/three.module.js';
-import { GLTFLoader } from './vendor/three/addons/loaders/GLTFLoader.js';
+import * as THREE from './assets/js/three.module.js';
+import { GLTFLoader } from './assets/js/GLTFLoader.js';
 
 const canvas = document.getElementById('dancer-canvas');
 const stage = document.getElementById('dancer-stage');
