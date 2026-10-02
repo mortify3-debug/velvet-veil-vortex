@@ -558,10 +558,19 @@ body {
   height: 100%;
   display: block;
   opacity: 0;
-  transition: opacity 0.4s ease;
+  transition: opacity 0.35s ease;
+  background: transparent;
   filter:
-    drop-shadow(0 0 6px rgba(255, 255, 255, 0.3))
-    drop-shadow(0 0 16px rgba(220, 235, 255, 0.18));
+    drop-shadow(0 0 8px rgba(255, 255, 255, 0.35))
+    drop-shadow(0 0 20px rgba(220, 235, 255, 0.2));
+}
+.dancer-stage,
+.dancer-wrap {
+  background: transparent !important;
+}
+.dancer-glow,
+.dancer-floor {
+  display: none !important; /* no extra plates under the model */
 }
 
 .dancer-img {
