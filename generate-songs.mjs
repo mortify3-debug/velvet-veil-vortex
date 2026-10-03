@@ -92,21 +92,30 @@ const albums = [];
 
 for (const dir of albumDirs) {
   const folder = dir.name;
-  const files = (await readdir(join(musicDir, folder), { withFileTypes: true }))
+  const rawFiles = (await readdir(join(musicDir, folder), { withFileTypes: true }))
     .filter(x => x.isFile() && audioExt.test(x.name))
     .map(x => x.name)
     .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
 
-  // Fail deployment if a discovered audio file is empty or unreadable.
-  for (const name of files) {
+  // Skip invalid or empty audio files instead of failing the whole scan.
+  const files = [];
+  for (const name of rawFiles) {
     const filePath = join(musicDir, folder, name);
-    const info = await stat(filePath);
-    if (!info.isFile() || info.size === 0) {
-      throw new Error(`Invalid or empty audio file: ${filePath}`);
+    try {
+      const info = await stat(filePath);
+      if (!info.isFile() || info.size === 0) {
+        console.warn(`WARNING: skipping invalid or empty audio file: ${filePath}`);
+        continue;
+      }
+      files.push(name);
+    } catch (err) {
+      console.warn(`WARNING: cannot stat audio file ${filePath}: ${err.message}`);
+      continue;
     }
   }
+
   if (files.length === 0) {
-    console.warn(`WARNING: album folder has no audio files: music/${folder}`);
+    console.warn(`WARNING: album folder has no valid audio files: music/${folder}`);
   }
 
   albums.push({
@@ -132,22 +141,51 @@ const flat = albums.flatMap(a =>
 );
 
 /* Do not wipe a working catalog if CI scanned zero audio files
-   (missing LFS pull, empty placeholders, wrong paths). */
+   (missing LFS pull, empty placeholders, wrong paths).
+   Guard checks BOTH albums.json and songs.json, so neither gets
+   overwritten when the previous catalog still has tracks. */
 if (flat.length === 0) {
-  try {
-    const prev = JSON.parse(await readFile('./albums.json', 'utf8'));
-    const prevTracks = Array.isArray(prev)
-      ? prev.reduce((n, a) => n + ((a.tracks && a.tracks.length) || 0), 0)
-      : 0;
-    if (prevTracks > 0) {
-      console.warn(
-        `WARNING: scanner found 0 audio files, but albums.json already has ${prevTracks} track(s). Keeping existing catalog.`
-      );
-      console.log('albums.json: kept existing');
-      process.exit(0);
+  const prevAlbumsRaw = await readFile('./albums.json', 'utf8').catch(() => null);
+  const prevSongsRaw = await readFile('./songs.json', 'utf8').catch(() => null);
+
+  let prevTracks = 0;
+  if (prevAlbumsRaw) {
+    try {
+      const prev = JSON.parse(prevAlbumsRaw);
+      prevTracks = Array.isArray(prev)
+        ? prev.reduce((n, a) => n + ((a.tracks && a.tracks.length) || 0), 0)
+        : 0;
+    } catch {
+      prevTracks = 0;
     }
-  } catch {
-    /* no previous catalog — write empty */
+  }
+
+  // If songs.json exists and has tracks but albums.json is unreadable,
+  // still protect the catalog.
+  if (prevTracks === 0 && prevSongsRaw) {
+    try {
+      const prevSongs = JSON.parse(prevSongsRaw);
+      if (Array.isArray(prevSongs)) prevTracks = prevSongs.length;
+    } catch {
+      /* ignore */
+    }
+  }
+
+  const hasCompletePrevCatalog = Boolean(prevAlbumsRaw) && Boolean(prevSongsRaw);
+
+  if (prevTracks > 0 && hasCompletePrevCatalog) {
+    console.warn(
+      `WARNING: scanner found 0 audio files, but existing catalog has ${prevTracks} track(s). Keeping existing albums.json and songs.json.`
+    );
+    console.log('albums.json: kept existing');
+    console.log('songs.json: kept existing');
+    process.exit(0);
+  }
+
+  if (prevTracks > 0 && !hasCompletePrevCatalog) {
+    console.warn(
+      `WARNING: existing catalog has ${prevTracks} track(s), but one of the files is missing (albums.json=${Boolean(prevAlbumsRaw)}, songs.json=${Boolean(prevSongsRaw)}). Writing empty catalog.`
+    );
   }
 }
 
