@@ -22,7 +22,8 @@ permissions:
 
 concurrency:
   group: pages
-  cancel-in-progress: false
+  # Latest push wins — faster catalog updates when adding tracks
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -30,6 +31,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
 
       - name: Setup Node
         uses: actions/setup-node@v5
@@ -47,6 +50,8 @@ jobs:
           node --input-type=module -e "import fs from 'node:fs'; for (const f of ['albums.json','songs.json']) JSON.parse(fs.readFileSync(f,'utf8')); console.log('Music catalog JSON is valid')"
           echo 'Audio files found:'
           find music -type f \( -iname '*.mp3' -o -iname '*.m4a' -o -iname '*.ogg' -o -iname '*.wav' \) -print || true
+          TRACKS=$(node --input-type=module -e "import fs from 'node:fs'; console.log(JSON.parse(fs.readFileSync('songs.json','utf8')).length)")
+          echo "Tracks in catalog: $TRACKS"
 
       - name: Configure Pages
         uses: actions/configure-pages@v6
