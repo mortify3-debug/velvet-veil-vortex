@@ -8,6 +8,7 @@
  */
 import { readdir, writeFile, mkdir, stat, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { parseFile } from 'music-metadata';
 
 const musicDir = './music';
 const coversDir = './assets/covers';
@@ -70,10 +71,12 @@ function findCover(folderName) {
   for (const k of keys) {
     if (coverByKey.has(k)) {
       const file = coverByKey.get(k);
-      return `./assets/covers/${encodeURIComponent(file)}`;
+      // FIX 1: absolute path from site root
+      return `/assets/covers/${encodeURIComponent(file)}`;
     }
   }
-  return './assets/cover2.jpg';
+  // FIX 1: absolute fallback path
+  return '/assets/cover2.jpg';
 }
 
 const entries = await readdir(musicDir, { withFileTypes: true });
@@ -101,17 +104,29 @@ for (const dir of albumDirs) {
   const files = [];
   for (const name of rawFiles) {
     const filePath = join(musicDir, folder, name);
+
+    // FIX 1 (part 1/2 from earlier): skip invalid/empty instead of throwing.
     try {
       const info = await stat(filePath);
       if (!info.isFile() || info.size === 0) {
         console.warn(`WARNING: skipping invalid or empty audio file: ${filePath}`);
         continue;
       }
-      files.push(name);
     } catch (err) {
       console.warn(`WARNING: cannot stat audio file ${filePath}: ${err.message}`);
       continue;
     }
+
+    // FIX 2: read real duration so the player has a fallback time.
+    let duration = 0;
+    try {
+      const meta = await parseFile(filePath, { duration: true });
+      duration = Math.round(meta.format.duration || 0);
+    } catch (err) {
+      console.warn(`WARNING: cannot read metadata for ${filePath}: ${err.message}`);
+    }
+
+    files.push({ name, duration });
   }
 
   if (files.length === 0) {
@@ -124,9 +139,12 @@ for (const dir of albumDirs) {
     cover: findCover(folder),
     year: '',
     folder,
-    tracks: files.map(name => ({
+    tracks: files.map(({ name, duration }) => ({
       title: makeTitle(name),
-      src: `./music/${encodePath(folder, name)}`
+      // FIX 1: absolute path from site root, not relative to current page.
+      src: `/music/${encodePath(folder, name)}`,
+      // FIX 2: pre-computed duration in seconds.
+      duration
     }))
   });
 }
@@ -136,14 +154,15 @@ const flat = albums.flatMap(a =>
     title: t.title,
     src: t.src,
     cover: a.cover,
-    album: a.title
+    album: a.title,
+    // FIX 2: duration also in songs.json.
+    duration: t.duration
   }))
 );
 
 /* Do not wipe a working catalog if CI scanned zero audio files
    (missing LFS pull, empty placeholders, wrong paths).
-   Guard checks BOTH albums.json and songs.json, so neither gets
-   overwritten when the previous catalog still has tracks. */
+   Guard checks BOTH albums.json and songs.json. */
 if (flat.length === 0) {
   const prevAlbumsRaw = await readFile('./albums.json', 'utf8').catch(() => null);
   const prevSongsRaw = await readFile('./songs.json', 'utf8').catch(() => null);
@@ -160,8 +179,6 @@ if (flat.length === 0) {
     }
   }
 
-  // If songs.json exists and has tracks but albums.json is unreadable,
-  // still protect the catalog.
   if (prevTracks === 0 && prevSongsRaw) {
     try {
       const prevSongs = JSON.parse(prevSongsRaw);
