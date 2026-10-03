@@ -226,6 +226,22 @@ function sanitizeAlbums(data) {
   });
 }
 
+/** Resolve media path against site root (works on GH project pages /subdir/). */
+function resolveMediaUrl(rel) {
+  if (!rel) return '';
+  try {
+    const basePath = location.pathname.replace(/\/[^/]*$/, '/');
+    const base = location.origin + basePath;
+    return new URL(rel, base).href;
+  } catch {
+    try {
+      return new URL(rel, location.href).href;
+    } catch {
+      return String(rel);
+    }
+  }
+}
+
 function pathOf(src) {
   try {
     return decodeURIComponent(new URL(src, location.href).pathname);
@@ -240,6 +256,10 @@ function isPlayingSrc(src) {
 
 function sameTrack(i) {
   return i === current && tracks[i] && isPlayingSrc(tracks[i].src);
+}
+
+function audioHasError() {
+  return !!(audio.error || (audio.networkState === 3 && audio.readyState === 0));
 }
 
 function setSeekUI(percent) {
@@ -496,9 +516,10 @@ function renderTracksInto(container) {
 
     const dl = row.querySelector('.download-card');
     const safeSrc = safeMediaUrl(t.src, 'audio');
+    const absSrc = safeSrc ? resolveMediaUrl(safeSrc) : '';
     if (dl) {
-      if (safeSrc) {
-        dl.href = safeSrc;
+      if (absSrc) {
+        dl.href = absSrc;
         dl.setAttribute('download', '');
       } else {
         dl.removeAttribute('href');
@@ -510,7 +531,7 @@ function renderTracksInto(container) {
 
     const probe = new Audio();
     probe.preload = 'metadata';
-    if (safeSrc) probe.src = safeSrc;
+    if (absSrc) probe.src = absSrc;
     probe.addEventListener('loadedmetadata', () => {
       t.duration = probe.duration;
       const el = row.querySelector(`[data-duration="${i}"]`);
@@ -666,8 +687,11 @@ function setupMediaSessionHandlers() {
 function load(i, autoplay = false) {
   if (!tracks[i]) return;
 
-  if (sameTrack(i)) {
-    if (autoplay && audio.paused) audio.play().catch(err => console.warn(err));
+  /* Same track already loaded and healthy → just play/pause */
+  if (sameTrack(i) && !audioHasError() && audio.readyState >= 1) {
+    if (autoplay && audio.paused) {
+      audio.play().catch(err => console.warn('[VVV] play:', err && err.message, audio.src));
+    }
     updatePlayButtons();
     updateMediaSession(tracks[i]);
     return;
@@ -685,21 +709,41 @@ function load(i, autoplay = false) {
     return;
   }
 
+  const absSrc = resolveMediaUrl(mediaSrc);
+
   audio.pause();
-  audio.src = mediaSrc;
+  audio.removeAttribute('src');
+  audio.load(); /* reset previous error state */
+
+  audio.onerror = () => {
+    const err = audio.error;
+    console.warn('[VVV] audio error', {
+      code: err && err.code,
+      message: err && err.message,
+      src: absSrc,
+      networkState: audio.networkState,
+      readyState: audio.readyState
+    });
+  };
+
+  audio.src = absSrc;
+  try {
+    audio.setAttribute('type', 'audio/mpeg');
+  } catch (_) {}
   audio.load();
 
   if (titleEl) titleEl.textContent = safeText(t.title, 120);
   if (playerCover) {
-    playerCover.src = safeMediaUrl(t.cover, 'image') || './assets/cover2.jpg';
+    const coverRel = safeMediaUrl(t.cover, 'image') || './assets/cover2.jpg';
+    playerCover.src = resolveMediaUrl(coverRel);
     playerCover.onerror = () => {
       playerCover.onerror = null;
-      playerCover.src = './assets/cover2.jpg';
+      playerCover.src = resolveMediaUrl('./assets/cover2.jpg');
     };
   }
 
   if (playerDownload) {
-    playerDownload.href = mediaSrc;
+    playerDownload.href = absSrc;
     playerDownload.hidden = false;
   }
 
@@ -714,9 +758,21 @@ function load(i, autoplay = false) {
   updateMediaSession(t);
 
   if (autoplay) {
-    const tryPlay = () => audio.play().catch(err => console.warn(err));
+    const tryPlay = () => {
+      if (audioHasError()) {
+        console.warn('[VVV] skip play — source failed:', absSrc);
+        return;
+      }
+      audio.play().catch(err =>
+        console.warn('[VVV] play:', err && err.name, err && err.message, absSrc)
+      );
+    };
     if (audio.readyState >= 2) tryPlay();
-    else audio.addEventListener('canplay', tryPlay, { once: true });
+    else {
+      audio.addEventListener('canplay', tryPlay, { once: true });
+      /* Fallback if canplay never fires but data arrived */
+      audio.addEventListener('loadeddata', tryPlay, { once: true });
+    }
   }
   updatePlayButtons();
 }
@@ -746,9 +802,15 @@ function toggleAlbumPlay(ai) {
 
 function toggleTrackPlay(i) {
   if (!tracks[i]) return;
-  if (sameTrack(i)) {
-    if (audio.paused) audio.play().catch(err => console.warn(err));
-    else audio.pause();
+  /* If same track but previous load failed — force reload instead of bare play() */
+  if (sameTrack(i) && !audioHasError() && audio.readyState >= 1) {
+    if (audio.paused) {
+      audio.play().catch(err =>
+        console.warn('[VVV] play:', err && err.name, err && err.message, audio.src)
+      );
+    } else {
+      audio.pause();
+    }
     updatePlayButtons();
     return;
   }
