@@ -22,8 +22,8 @@ permissions:
 
 concurrency:
   group: pages
-  # Latest push wins — faster catalog updates when adding tracks
-  cancel-in-progress: true
+  # Sequential deploys — do not cancel in-progress (stable catalog publish)
+  cancel-in-progress: false
 
 jobs:
   build:
@@ -32,7 +32,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
         with:
-          fetch-depth: 1
+          # Pull Git LFS objects if MP3s are stored via LFS
+          lfs: true
 
       - name: Setup Node
         uses: actions/setup-node@v5
@@ -52,6 +53,9 @@ jobs:
           find music -type f \( -iname '*.mp3' -o -iname '*.m4a' -o -iname '*.ogg' -o -iname '*.wav' \) -print || true
           TRACKS=$(node --input-type=module -e "import fs from 'node:fs'; console.log(JSON.parse(fs.readFileSync('songs.json','utf8')).length)")
           echo "Tracks in catalog: $TRACKS"
+          if [ "$TRACKS" = "0" ]; then
+            echo "::warning::Catalog has 0 tracks. Ensure MP3 files are committed under music/<Album>/ and not only placeholders."
+          fi
 
       - name: Configure Pages
         uses: actions/configure-pages@v6
