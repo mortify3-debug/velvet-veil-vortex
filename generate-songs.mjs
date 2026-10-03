@@ -6,7 +6,7 @@
  *   node generate-songs.mjs
  * или просто push — CI сделает это сам.
  */
-import { readdir, writeFile, mkdir, stat } from 'node:fs/promises';
+import { readdir, writeFile, mkdir, stat, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
 const musicDir = './music';
@@ -122,8 +122,6 @@ for (const dir of albumDirs) {
   });
 }
 
-await writeFile('./albums.json', JSON.stringify(albums, null, 2) + '\n');
-
 const flat = albums.flatMap(a =>
   a.tracks.map(t => ({
     title: t.title,
@@ -132,6 +130,28 @@ const flat = albums.flatMap(a =>
     album: a.title
   }))
 );
+
+/* Do not wipe a working catalog if CI scanned zero audio files
+   (missing LFS pull, empty placeholders, wrong paths). */
+if (flat.length === 0) {
+  try {
+    const prev = JSON.parse(await readFile('./albums.json', 'utf8'));
+    const prevTracks = Array.isArray(prev)
+      ? prev.reduce((n, a) => n + ((a.tracks && a.tracks.length) || 0), 0)
+      : 0;
+    if (prevTracks > 0) {
+      console.warn(
+        `WARNING: scanner found 0 audio files, but albums.json already has ${prevTracks} track(s). Keeping existing catalog.`
+      );
+      console.log('albums.json: kept existing');
+      process.exit(0);
+    }
+  } catch {
+    /* no previous catalog — write empty */
+  }
+}
+
+await writeFile('./albums.json', JSON.stringify(albums, null, 2) + '\n');
 await writeFile('./songs.json', JSON.stringify(flat, null, 2) + '\n');
 
 console.log(`albums.json: ${albums.length} album(s)`);

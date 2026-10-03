@@ -873,6 +873,51 @@ function goToMusic() {
   setNav('music');
 }
 
+/* Page zoom: Ctrl/Cmd + mouse wheel (desktop). Does not switch covers. */
+(function setupPageZoom() {
+  let pageZoom = 1;
+  const ZOOM_MIN = 0.5;
+  const ZOOM_MAX = 2.5;
+  const ZOOM_STEP = 0.1;
+
+  const applyZoom = (z) => {
+    pageZoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z));
+    const root = document.documentElement;
+    /* CSS zoom — Chromium / Safari */
+    root.style.zoom = String(pageZoom);
+    /* Firefox fallback via transform on body */
+    if (!('zoom' in root.style) || /firefox/i.test(navigator.userAgent)) {
+      root.style.zoom = '';
+      document.body.style.transformOrigin = '0 0';
+      document.body.style.transform = pageZoom === 1 ? '' : `scale(${pageZoom})`;
+      document.body.style.width = pageZoom === 1 ? '' : `${100 / pageZoom}%`;
+      document.body.style.height = pageZoom === 1 ? '' : `${100 / pageZoom}%`;
+    }
+  };
+
+  document.addEventListener('wheel', e => {
+    if (!(e.ctrlKey || e.metaKey)) return;
+    e.preventDefault();
+    const dir = e.deltaY > 0 ? -ZOOM_STEP : ZOOM_STEP;
+    applyZoom(pageZoom + dir);
+  }, { passive: false, capture: true });
+
+  /* Keyboard zoom shortcuts */
+  document.addEventListener('keydown', e => {
+    if (!(e.ctrlKey || e.metaKey)) return;
+    if (e.key === '=' || e.key === '+') {
+      e.preventDefault();
+      applyZoom(pageZoom + ZOOM_STEP);
+    } else if (e.key === '-') {
+      e.preventDefault();
+      applyZoom(pageZoom - ZOOM_STEP);
+    } else if (e.key === '0') {
+      e.preventDefault();
+      applyZoom(1);
+    }
+  });
+})();
+
 /* Cover-to-cover: desktop wheel snap; mobile = native free scroll (no transitions) */
 if (snapMain) {
   const io = new IntersectionObserver(
@@ -901,10 +946,9 @@ if (snapMain) {
         Math.abs(section.offsetTop - y) < Math.abs(sections[bestIdx].offsetTop - y) ? i : bestIdx, 0);
     };
 
-    /* Desktop: one eased step between covers.
-       Ctrl/Meta + wheel → browser zoom, covers must NOT switch. */
+    /* Desktop: one eased step between covers. Ctrl/Meta handled by page zoom above. */
     snapMain.addEventListener('wheel', e => {
-      if (e.ctrlKey || e.metaKey) return; /* allow page zoom */
+      if (e.ctrlKey || e.metaKey) return;
 
       const stage = e.target.closest('.music-stage');
       if (stage && stage.scrollHeight > stage.clientHeight + 4) {
