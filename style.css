@@ -94,13 +94,23 @@ body {
   height: 100dvh;
   overflow-y: auto;
   overflow-x: hidden;
-  /* proximity + JS easing = smoother, wheel-intensity-aware transitions */
+  /* Desktop: snap + JS easing. Mobile: free native scroll (see .no-cover-snap / media). */
   scroll-snap-type: y mandatory;
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-y: contain;
   scrollbar-width: none;
   -ms-overflow-style: none;
+}
+
+/* Mobile / touch: no cover-to-cover transitions, no snap */
+.snap-main.no-cover-snap {
+  scroll-snap-type: none !important;
+  scroll-behavior: auto !important;
+}
+.snap-main.no-cover-snap .cover {
+  scroll-snap-align: none !important;
+  scroll-snap-stop: normal;
 }
 
 .snap-main::-webkit-scrollbar {
@@ -1376,6 +1386,9 @@ audio { display: none; }
   .snap-main {
     height: 100svh;
     height: 100dvh;
+    /* No snap / no animated transitions between covers on mobile */
+    scroll-snap-type: none !important;
+    scroll-behavior: auto !important;
   }
 
   .cover,
@@ -1385,6 +1398,8 @@ audio { display: none; }
     min-height: 100dvh;
     height: 100svh;
     height: 100dvh;
+    scroll-snap-align: none !important;
+    scroll-snap-stop: normal;
   }
 
   .cover-hero {

@@ -796,6 +796,28 @@ function setNav(which) {
   });
 }
 
+document.querySelectorAll('.nav-link').forEach(a => {
+  a.addEventListener('click', e => {
+    e.preventDefault();
+    const which = a.dataset.nav;
+    if (which === 'music') {
+      goToMusic();
+      return;
+    }
+    if (!snapMain) return;
+    const home = document.getElementById('home');
+    const mobile = window.matchMedia('(hover: none), (pointer: coarse), (max-width: 700px)').matches
+      || snapMain.classList.contains('no-cover-snap');
+    if (home) {
+      if (mobile) snapMain.scrollTop = home.offsetTop;
+      else smoothGoTo(home, 700);
+    } else {
+      snapMain.scrollTop = 0;
+    }
+    setNav('home');
+  });
+});
+
 let scrollAnimId = 0;
 
 /** Smooth scroll to absolute Y inside snapMain */
@@ -836,13 +858,22 @@ function smoothGoTo(section, durationMs = 700) {
 }
 
 function goToMusic() {
-  coverStep = 0;
-  coverStepDir = 0;
-  smoothGoTo(musicSection, 800);
+  if (!musicSection || !snapMain) {
+    setNav('music');
+    return;
+  }
+  /* Mobile: jump without cover transition animation */
+  const mobile = window.matchMedia('(hover: none), (pointer: coarse), (max-width: 700px)').matches
+    || snapMain.classList.contains('no-cover-snap');
+  if (mobile) {
+    snapMain.scrollTop = musicSection.offsetTop;
+  } else {
+    smoothGoTo(musicSection, 700);
+  }
   setNav('music');
 }
 
-/* Smooth cover-to-cover scrolling */
+/* Cover-to-cover: desktop wheel snap; mobile = native free scroll (no transitions) */
 if (snapMain) {
   const io = new IntersectionObserver(
     entries => {
@@ -850,37 +881,48 @@ if (snapMain) {
         if (e.isIntersecting) setNav(e.target.id === 'music' ? 'music' : 'home');
       });
     },
-    { root: snapMain, threshold: 0.55 }
+    { root: snapMain, threshold: 0.45 }
   );
   document.querySelectorAll('.cover').forEach(s => io.observe(s));
 
-  let wheelGate = false;
-  const getSections = () => [...document.querySelectorAll('.cover')];
-  const nearestSectionIndex = () => {
-    const sections = getSections();
-    const y = snapMain.scrollTop;
-    return sections.reduce((bestIdx, section, i) =>
-      Math.abs(section.offsetTop - y) < Math.abs(sections[bestIdx].offsetTop - y) ? i : bestIdx, 0);
-  };
+  const isCoarsePointer = () =>
+    window.matchMedia('(hover: none), (pointer: coarse), (max-width: 700px)').matches;
 
-  /* One deliberate, eased scroll between covers; no intermediate wheel steps. */
-  snapMain.addEventListener('wheel', e => {
-    const stage = e.target.closest('.music-stage');
-    if (stage && stage.scrollHeight > stage.clientHeight + 4) {
-      const atTop = stage.scrollTop <= 0 && e.deltaY < 0;
-      const atBottom = stage.scrollTop + stage.clientHeight >= stage.scrollHeight - 2 && e.deltaY > 0;
-      if (!atTop && !atBottom) return;
-      if (atBottom && e.deltaY > 0) return;
-    }
-    e.preventDefault();
-    if (scrollLock || wheelGate || !e.deltaY) return;
-    const sections = getSections();
-    const targetIdx = nearestSectionIndex() + (e.deltaY > 0 ? 1 : -1);
-    if (targetIdx < 0 || targetIdx >= sections.length) return;
-    wheelGate = true;
-    smoothScrollToY(sections[targetIdx].offsetTop, 950);
-    setTimeout(() => { wheelGate = false; }, 980);
-  }, { passive: false });
+  /* Mobile / touch: no JS cover transitions — native scroll only */
+  if (isCoarsePointer()) {
+    snapMain.classList.add('no-cover-snap');
+  } else {
+    let wheelGate = false;
+    const getSections = () => [...document.querySelectorAll('.cover')];
+    const nearestSectionIndex = () => {
+      const sections = getSections();
+      const y = snapMain.scrollTop;
+      return sections.reduce((bestIdx, section, i) =>
+        Math.abs(section.offsetTop - y) < Math.abs(sections[bestIdx].offsetTop - y) ? i : bestIdx, 0);
+    };
+
+    /* Desktop: one eased step between covers.
+       Ctrl/Meta + wheel → browser zoom, covers must NOT switch. */
+    snapMain.addEventListener('wheel', e => {
+      if (e.ctrlKey || e.metaKey) return; /* allow page zoom */
+
+      const stage = e.target.closest('.music-stage');
+      if (stage && stage.scrollHeight > stage.clientHeight + 4) {
+        const atTop = stage.scrollTop <= 0 && e.deltaY < 0;
+        const atBottom = stage.scrollTop + stage.clientHeight >= stage.scrollHeight - 2 && e.deltaY > 0;
+        if (!atTop && !atBottom) return;
+        if (atBottom && e.deltaY > 0) return;
+      }
+      e.preventDefault();
+      if (scrollLock || wheelGate || !e.deltaY) return;
+      const sections = getSections();
+      const targetIdx = nearestSectionIndex() + (e.deltaY > 0 ? 1 : -1);
+      if (targetIdx < 0 || targetIdx >= sections.length) return;
+      wheelGate = true;
+      smoothScrollToY(sections[targetIdx].offsetTop, 700);
+      setTimeout(() => { wheelGate = false; }, 720);
+    }, { passive: false });
+  }
 }
 
 function getNewestTrackInfo() {
@@ -1138,7 +1180,7 @@ if (location.hash && location.hash !== '#home') {
   const hash = location.hash;
   history.replaceState(null, '', location.pathname + location.search);
   setTimeout(() => {
-    if (hash === '#music' && musicSection) smoothGoTo(musicSection);
+    if (hash === '#music' && musicSection) goToMusic();
   }, 400);
 }
 
