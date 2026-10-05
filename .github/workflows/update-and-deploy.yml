@@ -4,19 +4,18 @@ on:
   push:
     branches: [main]
     paths:
+      # Do NOT trigger on albums.json / songs.json — they are auto-committed by this workflow
       - 'music/**'
       - 'index.html'
       - 'style.css'
       - 'app.js'
       - 'assets/**'
-      - 'albums.json'
-      - 'songs.json'
       - 'generate-songs.mjs'
       - '.github/workflows/update-and-deploy.yml'
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write   # needed to commit albums.json / songs.json back to the repo
   pages: write
   id-token: write
 
@@ -32,8 +31,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
         with:
-          # Pull Git LFS objects if MP3s are stored via LFS
           lfs: true
+          # Needed so the push below can update main
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Node
         uses: actions/setup-node@v5
@@ -46,8 +46,6 @@ jobs:
           sudo DEBIAN_FRONTEND=noninteractive apt-get install -y ffmpeg
           which ffprobe
           ffprobe -version | head -1
-          which ffmpeg
-          ffmpeg -version | head -1
 
       - name: Generate music catalog from repository files
         run: node generate-songs.mjs
@@ -61,9 +59,27 @@ jobs:
           echo 'Audio files found:'
           find music -type f \( -iname '*.mp3' -o -iname '*.m4a' -o -iname '*.ogg' -o -iname '*.wav' \) -print || true
           TRACKS=$(node --input-type=module -e "import fs from 'node:fs'; console.log(JSON.parse(fs.readFileSync('songs.json','utf8')).length)")
-          echo "Tracks in catalog: $TRACKS"
+          WITH_DUR=$(node --input-type=module -e "import fs from 'node:fs'; const s=JSON.parse(fs.readFileSync('songs.json','utf8')); console.log(s.filter(t=>t.duration>0).length)")
+          echo "Tracks in catalog: $TRACKS (with duration: $WITH_DUR)"
           if [ "$TRACKS" = "0" ]; then
             echo "::warning::Catalog has 0 tracks. Ensure MP3 files are committed under music/<Album>/ and not only placeholders."
+          fi
+          if [ "$WITH_DUR" = "0" ] && [ "$TRACKS" != "0" ]; then
+            echo "::warning::No track durations computed."
+          fi
+          node --input-type=module -e "import fs from 'node:fs'; const s=JSON.parse(fs.readFileSync('songs.json','utf8')); console.log('sample', JSON.stringify(s[0], null, 2))"
+
+      - name: Commit catalog JSON to repository
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add albums.json songs.json
+          if git diff --staged --quiet; then
+            echo "Catalog JSON unchanged — nothing to commit."
+          else
+            git commit -m "chore: update music catalog (albums.json, songs.json) [skip ci]"
+            git push
+            echo "Catalog JSON committed and pushed."
           fi
 
       - name: Configure Pages
