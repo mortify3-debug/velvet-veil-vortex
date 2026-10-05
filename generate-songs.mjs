@@ -171,7 +171,7 @@ async function probeDuration(filePath) {
   return null;
 }
 
-const albumOrder = ['Рекурсия миров', 'Город света', 'Киберпанк'];
+const albumOrder = ['Рекурсия миров', 'Город света', 'Киберпанк', 'Отражение'];
 
 const russianTitles = new Map([
   ['dvorец', 'Дворец'],
@@ -266,7 +266,8 @@ const aliases = {
     'rekursiya-mirov',
     'rekursiya mirov',
     'rekursia mirov'
-  ]
+  ],
+  'отражение': ['otrazhenie', 'otrazheniye', 'reflection']
 };
 
 function findCover(folderName, previous) {
