@@ -802,14 +802,20 @@ function load(i, autoplay = false) {
   };
 
   console.info('[VVV] loading via blob:', playSrc);
-  fetch(playSrc, { cache: 'force-cache' })
-    .then(r => {
+  fetch(playSrc, { cache: 'no-store' })
+    .then(async r => {
       if (!r.ok) throw new Error('HTTP ' + r.status);
-      return r.blob();
-    })
-    .then(blob => {
-      // Force correct MIME so Chromium FFmpegDemuxer accepts the stream
-      const typed = new Blob([blob], { type: 'audio/mpeg' });
+      const buf = await r.arrayBuffer();
+      console.info('[VVV] fetched bytes:', buf.byteLength, 'ct:', r.headers.get('content-type'), 'for', playSrc);
+      if (buf.byteLength < 1000) {
+        throw new Error('file too small (' + buf.byteLength + ' bytes) — not a real MP3');
+      }
+      // Inspect first bytes to confirm it's audio
+      const head = new Uint8Array(buf.slice(0, 4));
+      const headHex = [...head].map(b => b.toString(16).padStart(2, '0')).join('');
+      console.info('[VVV] file head:', headHex, head[0] === 0x49 && head[1] === 0x44 && head[2] === 0x33 ? '(ID3)' : '');
+
+      const typed = new Blob([buf], { type: 'audio/mpeg' });
       const blobUrl = URL.createObjectURL(typed);
       audio._blobUrl = blobUrl;
       audio.src = blobUrl;
