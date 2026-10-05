@@ -40,6 +40,15 @@ jobs:
         with:
           node-version: 22
 
+      - name: Install ffprobe (for track durations)
+        run: |
+          sudo apt-get update
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y ffmpeg
+          which ffprobe
+          ffprobe -version | head -1
+          which ffmpeg
+          ffmpeg -version | head -1
+
       - name: Generate music catalog from repository files
         run: node generate-songs.mjs
 
