@@ -24,10 +24,27 @@ const songsFile = './songs.json';
 const audioExt = /\.(mp3|m4a|ogg|wav)$/i;
 const imageExt = /\.(png|jpe?g|webp)$/i;
 
-/** Duration in seconds via ffprobe (CI has ffmpeg). null if unavailable. */
+let probeToolLogged = false;
+
+function parseDurationSeconds(text) {
+  // ffprobe plain number: "223.817143"
+  const plain = parseFloat(String(text).trim());
+  if (Number.isFinite(plain) && plain > 0) return Math.round(plain * 10) / 10;
+
+  // ffmpeg stderr: Duration: 00:03:43.82
+  const m = String(text).match(/Duration:\s*(\d+):(\d+):(\d+(?:\.\d+)?)/i);
+  if (m) {
+    const sec = (+m[1]) * 3600 + (+m[2]) * 60 + parseFloat(m[3]);
+    if (Number.isFinite(sec) && sec > 0) return Math.round(sec * 10) / 10;
+  }
+  return null;
+}
+
+/** Duration in seconds via ffprobe, fallback ffmpeg -i. null if unavailable. */
 async function probeDuration(filePath) {
+  // 1) ffprobe
   try {
-    const { stdout } = await execFileAsync(
+    const { stdout, stderr } = await execFileAsync(
       'ffprobe',
       [
         '-v', 'error',
@@ -35,13 +52,35 @@ async function probeDuration(filePath) {
         '-of', 'default=noprint_wrappers=1:nokey=1',
         filePath
       ],
-      { timeout: 30000 }
+      { timeout: 60000, maxBuffer: 2 * 1024 * 1024 }
     );
-    const sec = parseFloat(String(stdout).trim());
-    return Number.isFinite(sec) && sec > 0 ? Math.round(sec * 10) / 10 : null;
-  } catch {
-    return null;
+    const sec = parseDurationSeconds(stdout || stderr);
+    if (sec != null) return sec;
+  } catch (err) {
+    if (!probeToolLogged) {
+      probeToolLogged = true;
+      console.warn('ffprobe failed:', err && (err.stderr || err.message || err));
+    }
   }
+
+  // 2) ffmpeg -i (duration is on stderr; exit code is often non-zero)
+  try {
+    await execFileAsync(
+      'ffmpeg',
+      ['-i', filePath, '-f', 'null', '-'],
+      { timeout: 60000, maxBuffer: 4 * 1024 * 1024 }
+    );
+  } catch (err) {
+    const text = String((err && err.stderr) || (err && err.message) || '');
+    const sec = parseDurationSeconds(text);
+    if (sec != null) return sec;
+    if (!probeToolLogged) {
+      probeToolLogged = true;
+      console.warn('ffmpeg duration parse failed for', filePath, text.slice(0, 300));
+    }
+  }
+
+  return null;
 }
 
 const albumOrder = ['Рекурсия миров', 'Город света', 'Киберпанк'];
@@ -85,6 +124,20 @@ const normalize = value => String(value || '').trim().toLowerCase();
 
 await mkdir(musicDir, { recursive: true });
 await mkdir(coversDir, { recursive: true });
+
+// Sanity-check media tools (so CI logs show if ffmpeg is missing)
+try {
+  const { stdout } = await execFileAsync('ffprobe', ['-version'], { timeout: 10000 });
+  console.log('ffprobe:', String(stdout).split('\n')[0]);
+} catch (err) {
+  console.warn('WARNING: ffprobe not available — durations will be missing.', err && err.message);
+}
+try {
+  const { stdout } = await execFileAsync('ffmpeg', ['-version'], { timeout: 10000 });
+  console.log('ffmpeg:', String(stdout).split('\n')[0]);
+} catch (err) {
+  console.warn('WARNING: ffmpeg not available.', err && err.message);
+}
 
 /*
  * Read existing albums.json only for stable album metadata (cover/year/order).
