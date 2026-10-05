@@ -172,7 +172,7 @@ async function probeDuration(filePath) {
 }
 
 /* Newest album first (top of the site list). Prepend new albums here. */
-const albumOrder = ['Отражение', 'Киберпанк', 'Город света', 'Рекурсия миров'];
+const albumOrder = ['Отражение', 'Рекурсия миров', 'Город света', 'Киберпанк'];
 
 const russianTitles = new Map([
   ['dvorец', 'Дворец'],
