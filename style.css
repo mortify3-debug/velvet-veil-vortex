@@ -1668,3 +1668,94 @@ audio { display: none; }
 
 @media(prefers-reduced-motion:reduce){.listen-btn:hover .listen-neon,.listen-btn:focus-visible .listen-neon{animation:none!important}.hero-smoke.active i{animation:none;opacity:.35}}
 
+/* ——— Listen button: +7ch title, −15% size, ragged edge, always-on neon ——— */
+.listen-btn {
+  /* ~15% smaller than previous 112px / 22–42px padding */
+  min-height: 95px;
+  padding: 16px 30px 16px 18px;
+  gap: 12px;
+  max-width: min(520px, 96vw);
+  /* ragged / torn polygon — must match .listen-neon */
+  clip-path: polygon(
+    0% 14%, 3% 2%, 14% 9%, 26% 0%, 39% 11%, 52% 1%, 66% 10%, 79% 0%, 91% 8%, 100% 3%,
+    98% 18%, 100% 34%, 96% 49%, 100% 64%, 97% 79%, 100% 100%,
+    86% 97%, 74% 100%, 61% 94%, 48% 100%, 35% 95%, 22% 100%, 9% 96%, 0% 100%,
+    2% 84%, 0% 69%, 4% 54%, 0% 38%, 3% 24%
+  );
+  transform: none;
+  transform-origin: left center;
+}
+.listen-btn:hover {
+  transform: translateY(-2px) scale(1.02);
+}
+.listen-btn:active {
+  transform: scale(0.97);
+}
+.listen-title {
+  /* was ~260px; +7 character widths for longer track names */
+  max-width: calc(260px + 7ch);
+  font-size: clamp(15px, 2.7vw, 22px);
+}
+.listen-label {
+  font-size: 9px;
+}
+.listen-cta {
+  font-size: 10px;
+}
+.listen-play svg {
+  width: 40px;
+  height: 40px;
+}
+/* Always-on traveling neon along the ragged edge */
+.listen-neon {
+  opacity: 1 !important;
+  inset: 0;
+  padding: 4px;
+  transform: none !important;
+  clip-path: polygon(
+    0% 14%, 3% 2%, 14% 9%, 26% 0%, 39% 11%, 52% 1%, 66% 10%, 79% 0%, 91% 8%, 100% 3%,
+    98% 18%, 100% 34%, 96% 49%, 100% 64%, 97% 79%, 100% 100%,
+    86% 97%, 74% 100%, 61% 94%, 48% 100%, 35% 95%, 22% 100%, 9% 96%, 0% 100%,
+    2% 84%, 0% 69%, 4% 54%, 0% 38%, 3% 24%
+  );
+  background: conic-gradient(
+    from var(--edge-angle, 0deg),
+    transparent 0deg 270deg,
+    #ff4fa9 292deg,
+    #fff 312deg,
+    #42f5ff 328deg,
+    #ff4fa9 345deg,
+    transparent 360deg
+  );
+  animation: edge-travel 1.6s linear infinite !important;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+}
+.listen-btn:hover .listen-neon,
+.listen-btn:focus-visible .listen-neon {
+  opacity: 1 !important;
+  animation: edge-travel 1.2s linear infinite !important;
+  filter: brightness(1.15);
+}
+@media (max-width: 600px) {
+  .listen-btn {
+    min-height: 88px;
+    padding: 14px 16px 14px 12px;
+    gap: 10px;
+  }
+  .listen-title {
+    max-width: calc(200px + 7ch);
+    font-size: clamp(14px, 4vw, 18px);
+  }
+  .listen-neon {
+    padding: 3px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .listen-neon {
+    animation: none !important;
+    opacity: 0.9 !important;
+  }
+}
+

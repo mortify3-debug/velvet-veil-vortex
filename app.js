@@ -1145,9 +1145,9 @@ if (snapMain) {
 }
 
 function getNewestTrackInfo() {
-  /* Newest album = last in albumOrder / albums[]; newest track ≈ last in that album */
+  /* Newest album = first in albums[] (albumOrder has newest first). Last track ≈ newest file. */
   if (!albums.length) return null;
-  for (let i = albums.length - 1; i >= 0; i--) {
+  for (let i = 0; i < albums.length; i++) {
     const a = albums[i];
     const list = a.tracks || [];
     if (!list.length) continue;
