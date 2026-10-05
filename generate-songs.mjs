@@ -11,6 +11,10 @@
  */
 import { readdir, writeFile, mkdir, stat, readFile } from 'node:fs/promises';
 import { join, relative } from 'node:path';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+
+const execFileAsync = promisify(execFile);
 
 const musicDir = './music';
 const coversDir = './assets/covers';
@@ -19,6 +23,26 @@ const songsFile = './songs.json';
 
 const audioExt = /\.(mp3|m4a|ogg|wav)$/i;
 const imageExt = /\.(png|jpe?g|webp)$/i;
+
+/** Duration in seconds via ffprobe (CI has ffmpeg). null if unavailable. */
+async function probeDuration(filePath) {
+  try {
+    const { stdout } = await execFileAsync(
+      'ffprobe',
+      [
+        '-v', 'error',
+        '-show_entries', 'format=duration',
+        '-of', 'default=noprint_wrappers=1:nokey=1',
+        filePath
+      ],
+      { timeout: 30000 }
+    );
+    const sec = parseFloat(String(stdout).trim());
+    return Number.isFinite(sec) && sec > 0 ? Math.round(sec * 10) / 10 : null;
+  } catch {
+    return null;
+  }
+}
 
 const albumOrder = ['Рекурсия миров', 'Город света', 'Киберпанк'];
 
@@ -199,13 +223,23 @@ for (const dir of albumDirs) {
     console.warn(`WARNING: no audio files found in music/${folder}/`);
   }
 
-  const tracks = collected.map(file => {
+  const tracks = [];
+  for (const file of collected) {
     const pathParts = [folder, ...file.relativePath.split(/[\\/]/)];
-    return {
+    const fullPath = join(musicDir, folder, file.relativePath);
+    const duration = await probeDuration(fullPath);
+    const track = {
       title: makeTitle(file.name),
       src: `./music/${encodePath(...pathParts)}`
     };
-  });
+    if (duration != null) track.duration = duration;
+    tracks.push(track);
+    if (duration != null) {
+      console.log(`  duration ${duration}s — ${folder}/${file.name}`);
+    } else {
+      console.warn(`  WARNING: no duration for ${folder}/${file.name}`);
+    }
+  }
 
   albums.push({
     id: previous?.id || slugify(folder),
@@ -222,7 +256,8 @@ const songs = albums.flatMap(album =>
     title: track.title,
     src: track.src,
     cover: album.cover,
-    album: album.title
+    album: album.title,
+    ...(track.duration != null ? { duration: track.duration } : {})
   }))
 );
 

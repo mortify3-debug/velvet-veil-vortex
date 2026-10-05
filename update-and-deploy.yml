@@ -1,0 +1,82 @@
+name: Update music and deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'music/**'
+      - 'index.html'
+      - 'style.css'
+      - 'app.js'
+      - 'assets/**'
+      - 'albums.json'
+      - 'songs.json'
+      - 'generate-songs.mjs'
+      - '.github/workflows/update-and-deploy.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  # Sequential deploys — do not cancel in-progress (stable catalog publish)
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          # Pull Git LFS objects if MP3s are stored via LFS
+          lfs: true
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - name: Install ffprobe (for track durations)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
+      - name: Generate music catalog from repository files
+        run: node generate-songs.mjs
+
+      - name: Verify generated catalog
+        run: |
+          test -f index.html
+          test -f albums.json
+          test -f songs.json
+          node --input-type=module -e "import fs from 'node:fs'; for (const f of ['albums.json','songs.json']) JSON.parse(fs.readFileSync(f,'utf8')); console.log('Music catalog JSON is valid')"
+          echo 'Audio files found:'
+          find music -type f \( -iname '*.mp3' -o -iname '*.m4a' -o -iname '*.ogg' -o -iname '*.wav' \) -print || true
+          TRACKS=$(node --input-type=module -e "import fs from 'node:fs'; console.log(JSON.parse(fs.readFileSync('songs.json','utf8')).length)")
+          echo "Tracks in catalog: $TRACKS"
+          if [ "$TRACKS" = "0" ]; then
+            echo "::warning::Catalog has 0 tracks. Ensure MP3 files are committed under music/<Album>/ and not only placeholders."
+          fi
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v6
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: .
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5

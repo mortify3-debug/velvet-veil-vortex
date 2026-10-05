@@ -192,10 +192,17 @@ function sanitizeAlbums(data) {
       const cover = t?.cover
         ? safeMediaUrl(t.cover, 'image', { silent: false }) || undefined
         : undefined;
+      const duration =
+        typeof t?.duration === 'number' && Number.isFinite(t.duration) && t.duration > 0
+          ? t.duration
+          : undefined;
+      // Seed client cache so list shows duration immediately
+      if (src && duration != null) durationCache.set(src, duration);
       return {
         title: safeText(t?.title || 'Трек', 120),
         src,
-        cover
+        cover,
+        ...(duration != null ? { duration } : {})
       };
     }).filter(t => !!t.src);
     // A track whose title matches its album is the album's opening track.
@@ -541,9 +548,12 @@ function renderTracksInto(container) {
 
     container.appendChild(row);
 
-    // Show cached duration immediately if we already know it
+    // Show duration immediately from catalog / cache (no network wait)
     const durEl = row.querySelector(`[data-duration="${i}"]`);
-    if (safeSrc && durationCache.has(safeSrc)) {
+    if (typeof t.duration === 'number' && Number.isFinite(t.duration) && t.duration > 0) {
+      if (safeSrc) durationCache.set(safeSrc, t.duration);
+      if (durEl) durEl.textContent = fmt(t.duration);
+    } else if (safeSrc && durationCache.has(safeSrc)) {
       t.duration = durationCache.get(safeSrc);
       if (durEl) durEl.textContent = fmt(t.duration);
     } else if (safeSrc) {
