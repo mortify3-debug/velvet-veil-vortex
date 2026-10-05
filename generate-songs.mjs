@@ -271,8 +271,6 @@ const aliases = {
 };
 
 function findCover(folderName, previous) {
-  if (previous?.cover) return previous.cover;
-
   const lower = normalize(folderName);
   const keys = [
     lower,
@@ -281,10 +279,17 @@ function findCover(folderName, previous) {
     ...(aliases[lower] || [])
   ];
 
+  // Prefer a real file from assets/covers/ (re-scan every run)
   for (const key of keys) {
     if (coverByKey.has(key)) {
       return `./assets/covers/${encodeURIComponent(coverByKey.get(key))}`;
     }
+  }
+
+  // Keep previous only if it is not the generic fallback
+  const prev = previous?.cover;
+  if (prev && !String(prev).includes('cover2.jpg')) {
+    return prev;
   }
 
   return './assets/cover2.jpg';
