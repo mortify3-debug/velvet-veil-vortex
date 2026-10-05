@@ -707,8 +707,7 @@ function setupMediaSessionHandlers() {
       load((current - 1 + tracks.length) % tracks.length, true);
     });
     navigator.mediaSession.setActionHandler('nexttrack', () => {
-      const n = nextIndex();
-      if (n >= 0) load(n, true);
+      playNextAcrossAlbums();
     });
     navigator.mediaSession.setActionHandler('seekto', details => {
       if (details.seekTime != null && Number.isFinite(audio.duration)) {
@@ -928,6 +927,44 @@ function nextIndex() {
   return (current + 1) % tracks.length;
 }
 
+/** Next track; at end of album → first track of the next album (and so on). */
+function playNextAcrossAlbums() {
+  if (!tracks.length && !albums.length) return;
+
+  if (repeatMode === 1) {
+    // single-track loop is handled by audio.loop; do not advance
+    return;
+  }
+
+  if (shuffleOn) {
+    const n = nextIndex();
+    if (n >= 0) load(n, true);
+    return;
+  }
+
+  // Still tracks left in the current queue
+  if (current >= 0 && current < tracks.length - 1) {
+    load(current + 1, true);
+    return;
+  }
+
+  // End of current album (or empty queue) → next album with tracks
+  const start = activeAlbumIndex >= 0 ? activeAlbumIndex : 0;
+  if (albums.length) {
+    for (let step = 1; step <= albums.length; step++) {
+      const ai = (start + step) % albums.length;
+      const list = albums[ai].tracks || [];
+      if (!list.length) continue;
+      openAlbum(ai, false);
+      load(0, true);
+      return;
+    }
+  }
+
+  // Fallback: restart current list
+  if (tracks.length) load(0, true);
+}
+
 function setNav(which) {
   document.querySelectorAll('.nav-link').forEach(a => {
     a.classList.toggle('active', a.dataset.nav === which);
@@ -1108,16 +1145,17 @@ if (snapMain) {
 }
 
 function getNewestTrackInfo() {
-  /* albums[0] = newest album; FIRST track = lead single for Listen button */
+  /* Newest album = last in albumOrder / albums[]; newest track ≈ last in that album */
   if (!albums.length) return null;
-  for (let i = 0; i < albums.length; i++) {
+  for (let i = albums.length - 1; i >= 0; i--) {
     const a = albums[i];
     const list = a.tracks || [];
     if (!list.length) continue;
-    const t = list[0];
+    const trackIndex = list.length - 1;
+    const t = list[trackIndex];
     return {
       albumIndex: i,
-      trackIndex: 0,
+      trackIndex,
       title: t.title || 'NEW TRACK',
       albumTitle: a.title || '',
       label: list.length === 1 ? 'NEW SINGLE' : 'NEW TRACK'
@@ -1216,8 +1254,7 @@ prevBtn.onclick = () => {
 };
 
 nextBtn.onclick = () => {
-  const n = nextIndex();
-  if (n >= 0) load(n, true);
+  playNextAcrossAlbums();
 };
 
 shuffleBtn.onclick = () => {
@@ -1271,15 +1308,8 @@ audio.addEventListener('timeupdate', () => {
   }
 });
 audio.addEventListener('ended', () => {
-  if (repeatMode === 1) return;
-  if (shuffleOn || current < tracks.length - 1) {
-    const n = nextIndex();
-    if (n >= 0) load(n, true);
-  } else {
-    setSeekUI(0);
-    currentTimeEl.textContent = '0:00';
-    updatePlayButtons();
-  }
+  if (repeatMode === 1) return; // audio.loop handles single-track repeat
+  playNextAcrossAlbums();
 });
 
 /* Seek bar */
