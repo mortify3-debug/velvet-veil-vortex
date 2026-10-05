@@ -9,7 +9,7 @@
  * MP3/аудиофайлы НЕ загружаются этим скриптом. Они должны уже находиться
  * в репозитории GitHub в папках music/<Альбом>/.
  */
-import { readdir, writeFile, mkdir, stat, readFile } from 'node:fs/promises';
+import { readdir, writeFile, mkdir, stat, readFile, open } from 'node:fs/promises';
 import { join, relative } from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
@@ -27,11 +27,9 @@ const imageExt = /\.(png|jpe?g|webp)$/i;
 let probeToolLogged = false;
 
 function parseDurationSeconds(text) {
-  // ffprobe plain number: "223.817143"
   const plain = parseFloat(String(text).trim());
   if (Number.isFinite(plain) && plain > 0) return Math.round(plain * 10) / 10;
 
-  // ffmpeg stderr: Duration: 00:03:43.82
   const m = String(text).match(/Duration:\s*(\d+):(\d+):(\d+(?:\.\d+)?)/i);
   if (m) {
     const sec = (+m[1]) * 3600 + (+m[2]) * 60 + parseFloat(m[3]);
@@ -40,9 +38,103 @@ function parseDurationSeconds(text) {
   return null;
 }
 
-/** Duration in seconds via ffprobe, fallback ffmpeg -i. null if unavailable. */
+/** Pure-JS MP3 duration from Xing/Info header (works without ffmpeg). */
+async function probeMp3DurationJs(filePath) {
+  let fh;
+  try {
+    fh = await open(filePath, 'r');
+    const stat = await fh.stat();
+    const size = stat.size;
+    if (size < 128) return null;
+
+    const headSize = Math.min(size, 256 * 1024);
+    const buf = Buffer.alloc(headSize);
+    await fh.read(buf, 0, headSize, 0);
+
+    let offset = 0;
+    // Skip ID3v2
+    if (buf[0] === 0x49 && buf[1] === 0x44 && buf[2] === 0x33) {
+      const synch = (buf[6] << 21) | (buf[7] << 14) | (buf[8] << 7) | buf[9];
+      offset = 10 + synch + ((buf[5] & 0x10) ? 10 : 0);
+      if (offset >= headSize) return null;
+    }
+
+    // Find first MPEG frame sync
+    let frameOffset = -1;
+    for (let i = offset; i < headSize - 4; i++) {
+      if (buf[i] === 0xff && (buf[i + 1] & 0xe0) === 0xe0) {
+        frameOffset = i;
+        break;
+      }
+    }
+    if (frameOffset < 0) return null;
+
+    const b1 = buf[frameOffset + 1];
+    const b2 = buf[frameOffset + 2];
+    const mpegVerBits = (b1 >> 3) & 0x03; // 3=MPEG1, 2=MPEG2, 0=MPEG2.5
+    const layerBits = (b1 >> 1) & 0x03;   // 1=Layer III
+    const brIdx = (b2 >> 4) & 0x0f;
+    const srIdx = (b2 >> 2) & 0x03;
+    if (brIdx === 0 || brIdx === 15 || srIdx === 3) return null;
+
+    const mpeg = mpegVerBits === 3 ? 1 : mpegVerBits === 2 ? 2 : 25;
+    const layer = layerBits === 1 ? 3 : layerBits === 2 ? 2 : layerBits === 3 ? 1 : 0;
+    if (layer !== 3) return null;
+
+    const srTable = {
+      1: [44100, 48000, 32000],
+      2: [22050, 24000, 16000],
+      25: [11025, 12000, 8000]
+    };
+    const sampleRate = srTable[mpeg]?.[srIdx];
+    if (!sampleRate) return null;
+
+    // Side info size for Xing offset
+    const channelMode = (buf[frameOffset + 3] >> 6) & 0x03;
+    const mono = channelMode === 3;
+    let xingOff;
+    if (mpeg === 1) xingOff = mono ? 17 : 32;
+    else xingOff = mono ? 9 : 17;
+
+    const tagPos = frameOffset + 4 + xingOff;
+    if (tagPos + 12 >= headSize) return null;
+
+    const tag = buf.toString('ascii', tagPos, tagPos + 4);
+    if (tag !== 'Xing' && tag !== 'Info') {
+      // CBR fallback: estimate from bitrate + file size
+      const brTables = {
+        1: [0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320],
+        2: [0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160]
+      };
+      const br = (mpeg === 1 ? brTables[1] : brTables[2])[brIdx];
+      if (!br) return null;
+      const audioBytes = size - frameOffset;
+      const sec = (audioBytes * 8) / (br * 1000);
+      return sec > 0.5 ? Math.round(sec * 10) / 10 : null;
+    }
+
+    const flags = buf.readUInt32BE(tagPos + 4);
+    if (!(flags & 0x01)) return null; // frames flag
+    const frames = buf.readUInt32BE(tagPos + 8);
+    const samplesPerFrame = mpeg === 1 ? 1152 : 576;
+    const sec = (frames * samplesPerFrame) / sampleRate;
+    return sec > 0.5 ? Math.round(sec * 10) / 10 : null;
+  } catch {
+    return null;
+  } finally {
+    if (fh) await fh.close().catch(() => {});
+  }
+}
+
+/** Duration: pure JS MP3 first, then ffprobe/ffmpeg if available. */
 async function probeDuration(filePath) {
-  // 1) ffprobe
+  // 1) Pure JS — works on Cloudflare Pages / any Node without ffmpeg
+  if (/\.mp3$/i.test(filePath)) {
+    const jsSec = await probeMp3DurationJs(filePath);
+    if (jsSec != null) return jsSec;
+  }
+
+  // 2) ffprobe
   try {
     const { stdout, stderr } = await execFileAsync(
       'ffprobe',
@@ -63,7 +155,7 @@ async function probeDuration(filePath) {
     }
   }
 
-  // 2) ffmpeg -i (duration is on stderr; exit code is often non-zero)
+  // 3) ffmpeg -i
   try {
     await execFileAsync(
       'ffmpeg',
@@ -74,10 +166,6 @@ async function probeDuration(filePath) {
     const text = String((err && err.stderr) || (err && err.message) || '');
     const sec = parseDurationSeconds(text);
     if (sec != null) return sec;
-    if (!probeToolLogged) {
-      probeToolLogged = true;
-      console.warn('ffmpeg duration parse failed for', filePath, text.slice(0, 300));
-    }
   }
 
   return null;
