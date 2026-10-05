@@ -539,24 +539,33 @@ function renderTracksInto(container) {
 
     container.appendChild(row);
 
-    const probe = new Audio();
-    probe.preload = 'metadata';
-    if (safeSrc) probe.src = safeSrc;
-    probe.addEventListener('loadedmetadata', () => {
-      t.duration = probe.duration;
-      const el = row.querySelector(`[data-duration="${i}"]`);
-      if (el) el.textContent = fmt(t.duration);
-    });
-    probe.addEventListener('error', () => {
-      const el = row.querySelector(`[data-duration="${i}"]`);
-      if (el) el.textContent = '—:—';
-      console.warn('[VVV] probe error', {
-        title: t.title,
-        src: safeSrc,
-        code: probe.error && probe.error.code,
-        message: probe.error && probe.error.message
-      });
-    });
+    // Duration probe via blob (same reason as main player — GH Pages MIME)
+    if (safeSrc) {
+      fetch(safeSrc, { cache: 'force-cache' })
+        .then(r => (r.ok ? r.blob() : Promise.reject(new Error('HTTP ' + r.status))))
+        .then(blob => {
+          const typed = new Blob([blob], { type: 'audio/mpeg' });
+          const url = URL.createObjectURL(typed);
+          const probe = new Audio();
+          probe.preload = 'metadata';
+          probe.src = url;
+          probe.addEventListener('loadedmetadata', () => {
+            t.duration = probe.duration;
+            const el = row.querySelector(`[data-duration="${i}"]`);
+            if (el) el.textContent = fmt(t.duration);
+            URL.revokeObjectURL(url);
+          });
+          probe.addEventListener('error', () => {
+            URL.revokeObjectURL(url);
+            const el = row.querySelector(`[data-duration="${i}"]`);
+            if (el) el.textContent = '—:—';
+          });
+        })
+        .catch(() => {
+          const el = row.querySelector(`[data-duration="${i}"]`);
+          if (el) el.textContent = '—:—';
+        });
+    }
 
     const toggle = () => toggleTrackPlay(i);
     row.querySelector('.card-play').onclick = e => {
@@ -729,8 +738,9 @@ function load(i, autoplay = false) {
     return;
   }
 
-  // Prefer relative path. On GitHub Pages some browsers fail to demux
-  // audio/mp3 responses → we load via fetch→blob as a robust fallback.
+  // Always load via fetch→blob with forced audio/mpeg.
+  // Direct <audio src="./music/..."> fails on GitHub Pages in Chromium
+  // with DEMUXER_ERROR_COULD_NOT_OPEN (Content-Type: audio/mp3).
   const playSrc = mediaSrc;
   currentLogicalSrc = playSrc;
 
@@ -747,7 +757,7 @@ function load(i, autoplay = false) {
     console.warn('[VVV] audio error', {
       code: err && err.code,
       message: err && err.message,
-      src: playSrc,
+      src: audio.src || playSrc,
       networkState: audio.networkState,
       readyState: audio.readyState
     });
@@ -791,59 +801,36 @@ function load(i, autoplay = false) {
     }
   };
 
-  const attachAndPlay = (src) => {
-    audio.src = src;
-    try { audio.setAttribute('type', 'audio/mpeg'); } catch (_) {}
-    audio.load();
-    if (audio.readyState >= 2) tryPlay();
-    else {
-      audio.addEventListener('canplay', tryPlay, { once: true });
-      audio.addEventListener('loadeddata', tryPlay, { once: true });
-    }
-  };
-
-  // 1) Try direct relative URL first (fast path)
-  // 2) On demuxer / network error → fetch as blob with forced audio/mpeg type
-  let usedBlobFallback = false;
-  const onDirectError = () => {
-    if (usedBlobFallback) return;
-    usedBlobFallback = true;
-    console.warn('[VVV] direct load failed, trying blob fallback for', playSrc);
-    fetch(playSrc, { cache: 'force-cache' })
-      .then(r => {
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        return r.blob();
-      })
-      .then(blob => {
-        // Force correct MIME so Chromium demuxer accepts the stream
-        const typed = blob.type && blob.type.startsWith('audio/')
-          ? blob
-          : new Blob([blob], { type: 'audio/mpeg' });
-        const blobUrl = URL.createObjectURL(typed);
-        audio._blobUrl = blobUrl;
-        attachAndPlay(blobUrl);
-      })
-      .catch(err => {
-        console.warn('[VVV] blob fallback failed:', err && err.message, playSrc);
-      });
-  };
-
-  // Temporary handler that triggers blob path on first hard error
-  const directErrHandler = () => {
-    audio.removeEventListener('error', directErrHandler);
-    onDirectError();
-  };
-  audio.addEventListener('error', directErrHandler, { once: true });
-
-  attachAndPlay(playSrc);
+  console.info('[VVV] loading via blob:', playSrc);
+  fetch(playSrc, { cache: 'force-cache' })
+    .then(r => {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.blob();
+    })
+    .then(blob => {
+      // Force correct MIME so Chromium FFmpegDemuxer accepts the stream
+      const typed = new Blob([blob], { type: 'audio/mpeg' });
+      const blobUrl = URL.createObjectURL(typed);
+      audio._blobUrl = blobUrl;
+      audio.src = blobUrl;
+      try { audio.setAttribute('type', 'audio/mpeg'); } catch (_) {}
+      audio.load();
+      if (audio.readyState >= 2) tryPlay();
+      else {
+        audio.addEventListener('canplay', tryPlay, { once: true });
+        audio.addEventListener('loadeddata', tryPlay, { once: true });
+      }
+    })
+    .catch(err => {
+      console.warn('[VVV] blob load failed:', err && err.message, playSrc);
+    });
 }
 
 function toggleAlbumPlay(ai) {
   const album = albums[ai];
   if (!album || !(album.tracks || []).length) return;
 
-  const albumSrcs = new Set(album.tracks.map(t => pathOf(t.src)));
-  const currentIsFromAlbum = audio.src && albumSrcs.has(pathOf(audio.src));
+  const currentIsFromAlbum = !!(audio.src && (album.tracks || []).some(t => isPlayingSrc(t.src)));
 
   /* Always show this album's tracks + cover on screen */
   if (!audio.paused && currentIsFromAlbum) {
