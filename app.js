@@ -34,6 +34,8 @@ let repeatMode = 0;
 let isSeeking = false;
 let seekPercent = 0;
 let scrollLock = false;
+/** Cache of track durations by relative src path */
+const durationCache = new Map();
 
 const fmt = s =>
   !Number.isFinite(s)
@@ -539,32 +541,42 @@ function renderTracksInto(container) {
 
     container.appendChild(row);
 
-    // Duration probe via blob (same reason as main player — GH Pages MIME)
-    if (safeSrc) {
-      fetch(safeSrc, { cache: 'force-cache' })
-        .then(r => (r.ok ? r.blob() : Promise.reject(new Error('HTTP ' + r.status))))
-        .then(blob => {
-          const typed = new Blob([blob], { type: 'audio/mpeg' });
+    // Show cached duration immediately if we already know it
+    const durEl = row.querySelector(`[data-duration="${i}"]`);
+    if (safeSrc && durationCache.has(safeSrc)) {
+      t.duration = durationCache.get(safeSrc);
+      if (durEl) durEl.textContent = fmt(t.duration);
+    } else if (safeSrc) {
+      // Light probe: only first 256 KB (ID3 + Xing/VBRI usually enough for duration)
+      fetch(safeSrc, {
+        cache: 'force-cache',
+        headers: { Range: 'bytes=0-262143' }
+      })
+        .then(r => {
+          if (!r.ok && r.status !== 206) throw new Error('HTTP ' + r.status);
+          return r.arrayBuffer();
+        })
+        .then(buf => {
+          const typed = new Blob([buf], { type: 'audio/mpeg' });
           const url = URL.createObjectURL(typed);
           const probe = new Audio();
           probe.preload = 'metadata';
           probe.src = url;
-          probe.addEventListener('loadedmetadata', () => {
-            t.duration = probe.duration;
-            const el = row.querySelector(`[data-duration="${i}"]`);
-            if (el) el.textContent = fmt(t.duration);
+          const finish = (sec) => {
             URL.revokeObjectURL(url);
-          });
+            if (Number.isFinite(sec) && sec > 0) {
+              t.duration = sec;
+              durationCache.set(safeSrc, sec);
+              if (durEl) durEl.textContent = fmt(sec);
+            }
+          };
+          probe.addEventListener('loadedmetadata', () => finish(probe.duration));
           probe.addEventListener('error', () => {
             URL.revokeObjectURL(url);
-            const el = row.querySelector(`[data-duration="${i}"]`);
-            if (el) el.textContent = '—:—';
+            // leave —:— ; duration will appear after first full play
           });
         })
-        .catch(() => {
-          const el = row.querySelector(`[data-duration="${i}"]`);
-          if (el) el.textContent = '—:—';
-        });
+        .catch(() => { /* leave —:— */ });
     }
 
     const toggle = () => toggleTrackPlay(i);
@@ -1231,6 +1243,13 @@ audio.addEventListener('loadedmetadata', () => {
   if (durationEl) durationEl.textContent = fmt(audio.duration);
   if (!isSeeking && Number.isFinite(audio.duration) && audio.duration > 0) {
     setSeekUI((audio.currentTime / audio.duration) * 100);
+  }
+  // Cache duration and update list row if visible
+  if (Number.isFinite(audio.duration) && audio.duration > 0 && currentLogicalSrc) {
+    durationCache.set(currentLogicalSrc, audio.duration);
+    if (tracks[current]) tracks[current].duration = audio.duration;
+    const row = document.querySelector(`.track[data-index="${current}"] .track-duration`);
+    if (row) row.textContent = fmt(audio.duration);
   }
   if (tracks[current]) updateMediaSession(tracks[current]);
 });
