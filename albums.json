@@ -155,5 +155,13 @@
         "duration": 219.2
       }
     ]
+  },
+  {
+    "id": "отражение",
+    "title": "Отражение",
+    "cover": "./assets/cover2.jpg",
+    "year": "",
+    "folder": "Отражение",
+    "tracks": []
   }
 ]
