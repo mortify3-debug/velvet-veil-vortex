@@ -1,51 +1,93 @@
 /**
- * Сканирует music/<Альбом>/ и пишет albums.json
- * Альбомы показываются даже без MP3 (с обложкой).
+ * Velvet Veil Vortex — генератор каталога музыки
  *
- * Добавить трек: положить MP3 в music/Киберпанк/ и
+ * Источник истины: реальные аудиофайлы внутри music/<Альбом>/.
+ * Скрипт НЕ придумывает MP3 и НЕ сохраняет устаревший каталог,
+ * если в репозитории нет ни одного аудиофайла.
+ *
+ * Запуск:
  *   node generate-songs.mjs
- * или просто push — CI сделает это сам.
+ *
+ * CI должен запускать этот файл перед деплоем.
  */
 import { readdir, writeFile, mkdir, stat, readFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { join, relative, sep } from 'node:path';
 
 const musicDir = './music';
 const coversDir = './assets/covers';
 
-await mkdir(musicDir, { recursive: true });
-await mkdir(coversDir, { recursive: true });
-
 const audioExt = /\.(mp3|m4a|ogg|wav)$/i;
 const imageExt = /\.(png|jpe?g|webp)$/i;
 
-const russianTitles = {
-  dvorets: 'Дворец',
-  'lift letit': 'Лифт летит',
-  simulyacia: 'Симуляция',
-  'vo sne ya': 'Во сне я...',
-  'vo sne ya..': 'Во сне я...',
-  'rekursiya mirov': 'Рекурсия миров'
-};
-
-/* newest first → oldest last */
+/* Порядок альбомов на сайте. Остальные альбомы идут после них. */
 const order = ['Рекурсия миров', 'Город света', 'Киберпанк'];
 
 const cleanBase = name =>
-  name.replace(/\.[^.]+$/, '').replace(/^\s*\d+\s*[-_.]\s*/, '').trim();
+  name
+    .replace(/\.[^.]+$/, '')
+    .replace(/^\s*\d+\s*[-_.]\s*/, '')
+    .trim();
+
+const russianTitles = {
+  'дворец': 'Дворец',
+  'лифт летит': 'Лифт летит',
+  'симуляция': 'Симуляция',
+  'во сне я...': 'Во сне я...',
+  'во сне я..': 'Во сне я...',
+  'рекурсия миров': 'Рекурсия миров'
+};
 
 const makeTitle = name => {
   const base = cleanBase(name);
-  return russianTitles[base.toLowerCase()] || base;
+  return russianTitles[base.toLocaleLowerCase('ru')] || base;
 };
 
 const encodePath = (...parts) =>
-  parts.map(p => encodeURIComponent(p)).join('/');
+  parts.map(part => encodeURIComponent(part)).join('/');
 
+async function listAudioFiles(dir) {
+  const result = [];
+  const entries = await readdir(dir, { withFileTypes: true });
+
+  for (const entry of entries) {
+    const fullPath = join(dir, entry.name);
+
+    if (entry.isDirectory()) {
+      result.push(...await listAudioFiles(fullPath));
+      continue;
+    }
+
+    if (!entry.isFile() || !audioExt.test(entry.name)) continue;
+
+    const info = await stat(fullPath);
+    if (info.size <= 0) {
+      throw new Error(`Пустой аудиофайл: ${fullPath}`);
+    }
+
+    /* Git LFS pointer is a tiny text file, not the real MP3. */
+    if (info.size < 1024 * 1024) {
+      const head = (await readFile(fullPath, 'utf8').catch(() => '')).slice(0, 200);
+      if (head.startsWith('version https://git-lfs.github.com/spec/v1')) {
+        throw new Error(
+          `Git LFS pointer вместо реального аудиофайла: ${fullPath}. ` +
+          `Проверьте Git LFS и наличие объекта MP3 в репозитории.`
+        );
+      }
+    }
+
+    result.push(fullPath);
+  }
+
+  return result;
+}
+
+/* Обложки ищутся только в assets/covers/. */
 const coverFiles = (await readdir(coversDir, { withFileTypes: true }))
   .filter(x => x.isFile() && imageExt.test(x.name))
   .map(x => x.name);
 
 const coverByKey = new Map();
+
 for (const name of coverFiles) {
   const base = name.replace(/\.[^.]+$/, '').toLowerCase();
   coverByKey.set(base, name);
@@ -54,146 +96,147 @@ for (const name of coverFiles) {
 }
 
 const aliases = {
-  киберпанк: ['cyberpunk'],
+  'киберпанк': ['cyberpunk'],
   'город света': ['gorodsveta', 'gorod-sveta', 'gorod sveta'],
-  'рекурсия миров': ['rekursia-mirov', 'rekursiya-mirov', 'rekursiya mirov', 'rekursia mirov']
+  'рекурсия миров': [
+    'rekursia-mirov',
+    'rekursiya-mirov',
+    'rekursiya mirov',
+    'rekursia mirov'
+  ]
 };
 
 function findCover(folderName) {
-  const lower = folderName.toLowerCase();
+  const lower = folderName.toLocaleLowerCase('ru');
   const keys = [
     lower,
     lower.replace(/[\s_]+/g, '-'),
     lower.replace(/[\s_-]+/g, ''),
     ...(aliases[lower] || [])
   ];
-  for (const k of keys) {
-    if (coverByKey.has(k)) {
-      const file = coverByKey.get(k);
-      return `./assets/covers/${encodeURIComponent(file)}`;
+
+  for (const key of keys) {
+    if (coverByKey.has(key)) {
+      return `./assets/covers/${encodeURIComponent(coverByKey.get(key))}`;
     }
   }
+
   return './assets/cover2.jpg';
 }
 
 const entries = await readdir(musicDir, { withFileTypes: true });
-let albumDirs = entries.filter(x => x.isDirectory());
+const albumDirs = entries
+  .filter(entry => entry.isDirectory())
+  .sort((a, b) => {
+    const ia = order.indexOf(a.name);
+    const ib = order.indexOf(b.name);
 
-albumDirs.sort((a, b) => {
-  const ia = order.indexOf(a.name);
-  const ib = order.indexOf(b.name);
-  if (ia === -1 && ib === -1) return a.name.localeCompare(b.name, 'ru');
-  if (ia === -1) return 1;
-  if (ib === -1) return -1;
-  return ia - ib;
-});
+    if (ia === -1 && ib === -1) {
+      return a.name.localeCompare(b.name, 'ru');
+    }
+    if (ia === -1) return 1;
+    if (ib === -1) return -1;
+    return ia - ib;
+  });
+
+if (albumDirs.length === 0) {
+  throw new Error('В music/ нет папок альбомов.');
+}
 
 const albums = [];
 
-for (const dir of albumDirs) {
-  const folder = dir.name;
-  const rawFiles = (await readdir(join(musicDir, folder), { withFileTypes: true }))
-    .filter(x => x.isFile() && audioExt.test(x.name))
-    .map(x => x.name)
-    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+for (const albumDir of albumDirs) {
+  const folder = albumDir.name;
+  const albumPath = join(musicDir, folder);
+  const audioFiles = await listAudioFiles(albumPath);
 
-  // Skip invalid or empty audio files instead of failing the whole scan.
-  const files = [];
-  for (const name of rawFiles) {
-    const filePath = join(musicDir, folder, name);
-    try {
-      const info = await stat(filePath);
-      if (!info.isFile() || info.size === 0) {
-        console.warn(`WARNING: skipping invalid or empty audio file: ${filePath}`);
-        continue;
-      }
-      files.push(name);
-    } catch (err) {
-      console.warn(`WARNING: cannot stat audio file ${filePath}: ${err.message}`);
-      continue;
-    }
+  audioFiles.sort((a, b) =>
+    a.localeCompare(b, undefined, {
+      numeric: true,
+      sensitivity: 'base'
+    })
+  );
+
+  if (audioFiles.length === 0) {
+    console.warn(`WARNING: альбом без аудиофайлов: music/${folder}`);
   }
 
-  if (files.length === 0) {
-    console.warn(`WARNING: album folder has no valid audio files: music/${folder}`);
-  }
+  const tracks = audioFiles.map(filePath => {
+    const relativePath = relative(musicDir, filePath)
+      .split(sep)
+      .filter(Boolean);
+
+    return {
+      title: makeTitle(relativePath.at(-1)),
+      src: `./music/${encodePath(...relativePath)}`
+    };
+  });
+
+  /* Трек с названием альбома всегда первым. */
+  const normalizedAlbumTitle = folder.trim().toLocaleLowerCase('ru');
+
+  tracks.sort((a, b) => {
+    const aIsAlbum = a.title.trim().toLocaleLowerCase('ru') === normalizedAlbumTitle;
+    const bIsAlbum = b.title.trim().toLocaleLowerCase('ru') === normalizedAlbumTitle;
+    return Number(bIsAlbum) - Number(aIsAlbum);
+  });
 
   albums.push({
-    id: folder.toLowerCase().replace(/\s+/g, '-'),
+    id: folder
+      .toLocaleLowerCase('ru')
+      .replace(/\s+/g, '-'),
     title: folder,
     cover: findCover(folder),
     year: '',
     folder,
-    tracks: files.map(name => ({
-      title: makeTitle(name),
-      src: `./music/${encodePath(folder, name)}`
-    }))
+    tracks
   });
 }
 
-const flat = albums.flatMap(a =>
-  a.tracks.map(t => ({
-    title: t.title,
-    src: t.src,
-    cover: a.cover,
-    album: a.title
+const totalTracks = albums.reduce(
+  (count, album) => count + album.tracks.length,
+  0
+);
+
+/*
+ * Нулевой каталог — это ошибка, а не нормальный результат.
+ * Старый songs.json больше не сохраняем: иначе CI может успешно
+ * задеплоить страницу с несуществующими MP3.
+ */
+if (totalTracks === 0) {
+  throw new Error(
+    'Не найдено ни одного аудиофайла. ' +
+    'Проверьте, что реальные MP3 находятся в music/<Альбом>/. ' +
+    'Пустые папки и Git LFS pointer-файлы не считаются треками.'
+  );
+}
+
+const songs = albums.flatMap(album =>
+  album.tracks.map(track => ({
+    title: track.title,
+    src: track.src,
+    cover: album.cover,
+    album: album.title
   }))
 );
 
-/* Do not wipe a working catalog if CI scanned zero audio files
-   (missing LFS pull, empty placeholders, wrong paths).
-   Guard checks BOTH albums.json and songs.json, so neither gets
-   overwritten when the previous catalog still has tracks. */
-if (flat.length === 0) {
-  const prevAlbumsRaw = await readFile('./albums.json', 'utf8').catch(() => null);
-  const prevSongsRaw = await readFile('./songs.json', 'utf8').catch(() => null);
+await writeFile(
+  './albums.json',
+  JSON.stringify(albums, null, 2) + '\n',
+  'utf8'
+);
 
-  let prevTracks = 0;
-  if (prevAlbumsRaw) {
-    try {
-      const prev = JSON.parse(prevAlbumsRaw);
-      prevTracks = Array.isArray(prev)
-        ? prev.reduce((n, a) => n + ((a.tracks && a.tracks.length) || 0), 0)
-        : 0;
-    } catch {
-      prevTracks = 0;
-    }
-  }
-
-  // If songs.json exists and has tracks but albums.json is unreadable,
-  // still protect the catalog.
-  if (prevTracks === 0 && prevSongsRaw) {
-    try {
-      const prevSongs = JSON.parse(prevSongsRaw);
-      if (Array.isArray(prevSongs)) prevTracks = prevSongs.length;
-    } catch {
-      /* ignore */
-    }
-  }
-
-  const hasCompletePrevCatalog = Boolean(prevAlbumsRaw) && Boolean(prevSongsRaw);
-
-  if (prevTracks > 0 && hasCompletePrevCatalog) {
-    console.warn(
-      `WARNING: scanner found 0 audio files, but existing catalog has ${prevTracks} track(s). Keeping existing albums.json and songs.json.`
-    );
-    console.log('albums.json: kept existing');
-    console.log('songs.json: kept existing');
-    process.exit(0);
-  }
-
-  if (prevTracks > 0 && !hasCompletePrevCatalog) {
-    console.warn(
-      `WARNING: existing catalog has ${prevTracks} track(s), but one of the files is missing (albums.json=${Boolean(prevAlbumsRaw)}, songs.json=${Boolean(prevSongsRaw)}). Writing empty catalog.`
-    );
-  }
-}
-
-await writeFile('./albums.json', JSON.stringify(albums, null, 2) + '\n');
-await writeFile('./songs.json', JSON.stringify(flat, null, 2) + '\n');
+await writeFile(
+  './songs.json',
+  JSON.stringify(songs, null, 2) + '\n',
+  'utf8'
+);
 
 console.log(`albums.json: ${albums.length} album(s)`);
-console.log(`songs.json: ${flat.length} track(s)`);
-for (const a of albums) {
-  console.log(`  - ${a.title}: ${a.tracks.length} track(s), cover=${a.cover}`);
+console.log(`songs.json: ${songs.length} track(s)`);
+
+for (const album of albums) {
+  console.log(
+    `  - ${album.title}: ${album.tracks.length} track(s), cover=${album.cover}`
+  );
 }
