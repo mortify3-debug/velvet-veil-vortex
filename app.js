@@ -226,9 +226,15 @@ function sanitizeAlbums(data) {
   });
 }
 
-/** Resolve media path against site root (works on GH project pages /subdir/). */
+/** Resolve media path against site root (works on GH project pages /subdir/).
+ *  Prefer relative paths for <audio> — more reliable with GitHub Pages + CORP/CSP.
+ */
 function resolveMediaUrl(rel) {
   if (!rel) return '';
+  // Keep safe relative paths as-is (browser resolves against current page URL)
+  if (rel.startsWith('./') || rel.startsWith('music/') || rel.startsWith('assets/')) {
+    return rel.startsWith('./') ? rel : './' + rel;
+  }
   try {
     const basePath = location.pathname.replace(/\/[^/]*$/, '/');
     const base = location.origin + basePath;
@@ -516,10 +522,10 @@ function renderTracksInto(container) {
 
     const dl = row.querySelector('.download-card');
     const safeSrc = safeMediaUrl(t.src, 'audio');
-    const absSrc = safeSrc ? resolveMediaUrl(safeSrc) : '';
+    // Prefer relative path for download too (browser resolves it)
     if (dl) {
-      if (absSrc) {
-        dl.href = absSrc;
+      if (safeSrc) {
+        dl.href = safeSrc;
         dl.setAttribute('download', '');
       } else {
         dl.removeAttribute('href');
@@ -531,11 +537,21 @@ function renderTracksInto(container) {
 
     const probe = new Audio();
     probe.preload = 'metadata';
-    if (absSrc) probe.src = absSrc;
+    if (safeSrc) probe.src = safeSrc;
     probe.addEventListener('loadedmetadata', () => {
       t.duration = probe.duration;
       const el = row.querySelector(`[data-duration="${i}"]`);
       if (el) el.textContent = fmt(t.duration);
+    });
+    probe.addEventListener('error', () => {
+      const el = row.querySelector(`[data-duration="${i}"]`);
+      if (el) el.textContent = '—:—';
+      console.warn('[VVV] probe error', {
+        title: t.title,
+        src: safeSrc,
+        code: probe.error && probe.error.code,
+        message: probe.error && probe.error.message
+      });
     });
 
     const toggle = () => toggleTrackPlay(i);
@@ -709,7 +725,8 @@ function load(i, autoplay = false) {
     return;
   }
 
-  const absSrc = resolveMediaUrl(mediaSrc);
+  // Prefer relative path — more reliable on GitHub Pages with CORP/CSP
+  const playSrc = mediaSrc;
 
   audio.pause();
   audio.removeAttribute('src');
@@ -720,13 +737,13 @@ function load(i, autoplay = false) {
     console.warn('[VVV] audio error', {
       code: err && err.code,
       message: err && err.message,
-      src: absSrc,
+      src: playSrc,
       networkState: audio.networkState,
       readyState: audio.readyState
     });
   };
 
-  audio.src = absSrc;
+  audio.src = playSrc;
   try {
     audio.setAttribute('type', 'audio/mpeg');
   } catch (_) {}
@@ -735,15 +752,15 @@ function load(i, autoplay = false) {
   if (titleEl) titleEl.textContent = safeText(t.title, 120);
   if (playerCover) {
     const coverRel = safeMediaUrl(t.cover, 'image') || './assets/cover2.jpg';
-    playerCover.src = resolveMediaUrl(coverRel);
+    playerCover.src = coverRel;
     playerCover.onerror = () => {
       playerCover.onerror = null;
-      playerCover.src = resolveMediaUrl('./assets/cover2.jpg');
+      playerCover.src = './assets/cover2.jpg';
     };
   }
 
   if (playerDownload) {
-    playerDownload.href = absSrc;
+    playerDownload.href = playSrc;
     playerDownload.hidden = false;
   }
 
@@ -760,11 +777,11 @@ function load(i, autoplay = false) {
   if (autoplay) {
     const tryPlay = () => {
       if (audioHasError()) {
-        console.warn('[VVV] skip play — source failed:', absSrc);
+        console.warn('[VVV] skip play — source failed:', playSrc);
         return;
       }
       audio.play().catch(err =>
-        console.warn('[VVV] play:', err && err.name, err && err.message, absSrc)
+        console.warn('[VVV] play:', err && err.name, err && err.message, playSrc)
       );
     };
     if (audio.readyState >= 2) tryPlay();
