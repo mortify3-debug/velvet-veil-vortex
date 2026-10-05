@@ -27,6 +27,7 @@ const snapMain = document.getElementById('snap-main');
 let albums = [];
 let tracks = [];
 let current = -1;
+let currentLogicalSrc = ''; // relative path of the track currently loaded (for sameTrack checks when using blob:)
 let activeAlbumIndex = -1;
 let shuffleOn = false;
 let repeatMode = 0;
@@ -257,7 +258,10 @@ function pathOf(src) {
 }
 
 function isPlayingSrc(src) {
-  return !!(audio.src && src && pathOf(audio.src) === pathOf(src));
+  if (!src) return false;
+  // When using blob: URLs, compare against the logical relative path we stored
+  if (currentLogicalSrc && pathOf(currentLogicalSrc) === pathOf(src)) return true;
+  return !!(audio.src && pathOf(audio.src) === pathOf(src));
 }
 
 function sameTrack(i) {
@@ -725,11 +729,17 @@ function load(i, autoplay = false) {
     return;
   }
 
-  // Prefer relative path — more reliable on GitHub Pages with CORP/CSP
+  // Prefer relative path. On GitHub Pages some browsers fail to demux
+  // audio/mp3 responses → we load via fetch→blob as a robust fallback.
   const playSrc = mediaSrc;
+  currentLogicalSrc = playSrc;
 
   audio.pause();
   audio.removeAttribute('src');
+  if (audio._blobUrl) {
+    try { URL.revokeObjectURL(audio._blobUrl); } catch (_) {}
+    audio._blobUrl = null;
+  }
   audio.load(); /* reset previous error state */
 
   audio.onerror = () => {
@@ -742,12 +752,6 @@ function load(i, autoplay = false) {
       readyState: audio.readyState
     });
   };
-
-  audio.src = playSrc;
-  try {
-    audio.setAttribute('type', 'audio/mpeg');
-  } catch (_) {}
-  audio.load();
 
   if (titleEl) titleEl.textContent = safeText(t.title, 120);
   if (playerCover) {
@@ -773,25 +777,65 @@ function load(i, autoplay = false) {
   );
 
   updateMediaSession(t);
+  updatePlayButtons();
 
-  if (autoplay) {
-    const tryPlay = () => {
-      if (audioHasError()) {
-        console.warn('[VVV] skip play — source failed:', playSrc);
-        return;
-      }
+  const tryPlay = () => {
+    if (audioHasError()) {
+      console.warn('[VVV] skip play — source failed:', playSrc);
+      return;
+    }
+    if (autoplay) {
       audio.play().catch(err =>
         console.warn('[VVV] play:', err && err.name, err && err.message, playSrc)
       );
-    };
+    }
+  };
+
+  const attachAndPlay = (src) => {
+    audio.src = src;
+    try { audio.setAttribute('type', 'audio/mpeg'); } catch (_) {}
+    audio.load();
     if (audio.readyState >= 2) tryPlay();
     else {
       audio.addEventListener('canplay', tryPlay, { once: true });
-      /* Fallback if canplay never fires but data arrived */
       audio.addEventListener('loadeddata', tryPlay, { once: true });
     }
-  }
-  updatePlayButtons();
+  };
+
+  // 1) Try direct relative URL first (fast path)
+  // 2) On demuxer / network error → fetch as blob with forced audio/mpeg type
+  let usedBlobFallback = false;
+  const onDirectError = () => {
+    if (usedBlobFallback) return;
+    usedBlobFallback = true;
+    console.warn('[VVV] direct load failed, trying blob fallback for', playSrc);
+    fetch(playSrc, { cache: 'force-cache' })
+      .then(r => {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.blob();
+      })
+      .then(blob => {
+        // Force correct MIME so Chromium demuxer accepts the stream
+        const typed = blob.type && blob.type.startsWith('audio/')
+          ? blob
+          : new Blob([blob], { type: 'audio/mpeg' });
+        const blobUrl = URL.createObjectURL(typed);
+        audio._blobUrl = blobUrl;
+        attachAndPlay(blobUrl);
+      })
+      .catch(err => {
+        console.warn('[VVV] blob fallback failed:', err && err.message, playSrc);
+      });
+  };
+
+  // Temporary handler that triggers blob path on first hard error
+  const directErrHandler = () => {
+    audio.removeEventListener('error', directErrHandler);
+    onDirectError();
+  };
+  audio.addEventListener('error', directErrHandler, { once: true });
+
+  attachAndPlay(playSrc);
 }
 
 function toggleAlbumPlay(ai) {
