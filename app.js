@@ -764,14 +764,36 @@ function load(i, autoplay = false) {
   // with DEMUXER_ERROR_COULD_NOT_OPEN (Content-Type: audio/mp3).
   const playSrc = mediaSrc;
   currentLogicalSrc = playSrc;
+  const loadGen = (audio._loadGen = (audio._loadGen || 0) + 1);
 
-  audio.pause();
-  audio.removeAttribute('src');
-  if (audio._blobUrl) {
-    try { URL.revokeObjectURL(audio._blobUrl); } catch (_) {}
-    audio._blobUrl = null;
+  // Keep lock-screen / MediaSession alive during fetch:
+  // update metadata FIRST and do NOT clear audio.src until the new blob is ready.
+  if (titleEl) titleEl.textContent = safeText(t.title, 120);
+  if (playerCover) {
+    const coverRel = safeMediaUrl(t.cover, 'image') || './assets/cover2.jpg';
+    playerCover.src = coverRel;
+    playerCover.onerror = () => {
+      playerCover.onerror = null;
+      playerCover.src = './assets/cover2.jpg';
+    };
   }
-  audio.load(); /* reset previous error state */
+  if (playerDownload) {
+    playerDownload.href = playSrc;
+    playerDownload.hidden = false;
+  }
+  setSeekUI(0);
+  if (currentTimeEl) currentTimeEl.textContent = '0:00';
+  if (durationEl) durationEl.textContent = '0:00';
+  document.querySelectorAll('.track').forEach((x, n) =>
+    x.classList.toggle('active', n === i)
+  );
+  updateMediaSession(t);
+  if (autoplay && 'mediaSession' in navigator) {
+    try { navigator.mediaSession.playbackState = 'playing'; } catch (_) {}
+  }
+  // Re-bind handlers (iOS sometimes drops them on track change)
+  setupMediaSessionHandlers();
+  updatePlayButtons();
 
   audio.onerror = () => {
     const err = audio.error;
@@ -784,33 +806,8 @@ function load(i, autoplay = false) {
     });
   };
 
-  if (titleEl) titleEl.textContent = safeText(t.title, 120);
-  if (playerCover) {
-    const coverRel = safeMediaUrl(t.cover, 'image') || './assets/cover2.jpg';
-    playerCover.src = coverRel;
-    playerCover.onerror = () => {
-      playerCover.onerror = null;
-      playerCover.src = './assets/cover2.jpg';
-    };
-  }
-
-  if (playerDownload) {
-    playerDownload.href = playSrc;
-    playerDownload.hidden = false;
-  }
-
-  setSeekUI(0);
-  if (currentTimeEl) currentTimeEl.textContent = '0:00';
-  if (durationEl) durationEl.textContent = '0:00';
-
-  document.querySelectorAll('.track').forEach((x, n) =>
-    x.classList.toggle('active', n === i)
-  );
-
-  updateMediaSession(t);
-  updatePlayButtons();
-
   const tryPlay = () => {
+    if (audio._loadGen !== loadGen) return;
     if (audioHasError()) {
       console.warn('[VVV] skip play — source failed:', playSrc);
       return;
@@ -820,28 +817,39 @@ function load(i, autoplay = false) {
         console.warn('[VVV] play:', err && err.name, err && err.message, playSrc)
       );
     }
+    updateMediaSession(t);
+    if ('mediaSession' in navigator) {
+      try {
+        navigator.mediaSession.playbackState = audio.paused ? 'paused' : 'playing';
+      } catch (_) {}
+    }
   };
 
   console.info('[VVV] loading via blob:', playSrc);
-  fetch(playSrc, { cache: 'no-store' })
+  fetch(playSrc, { cache: 'force-cache' })
     .then(async r => {
+      if (audio._loadGen !== loadGen) return;
       if (!r.ok) throw new Error('HTTP ' + r.status);
       const buf = await r.arrayBuffer();
+      if (audio._loadGen !== loadGen) return;
       console.info('[VVV] fetched bytes:', buf.byteLength, 'ct:', r.headers.get('content-type'), 'for', playSrc);
       if (buf.byteLength < 1000) {
         throw new Error('file too small (' + buf.byteLength + ' bytes) — not a real MP3');
       }
-      // Inspect first bytes to confirm it's audio
-      const head = new Uint8Array(buf.slice(0, 4));
-      const headHex = [...head].map(b => b.toString(16).padStart(2, '0')).join('');
-      console.info('[VVV] file head:', headHex, head[0] === 0x49 && head[1] === 0x44 && head[2] === 0x33 ? '(ID3)' : '');
 
       const typed = new Blob([buf], { type: 'audio/mpeg' });
       const blobUrl = URL.createObjectURL(typed);
+      const prevBlob = audio._blobUrl;
       audio._blobUrl = blobUrl;
+      // Atomic swap — avoids empty src gap that hides lock-screen player
       audio.src = blobUrl;
       try { audio.setAttribute('type', 'audio/mpeg'); } catch (_) {}
       audio.load();
+      if (prevBlob) {
+        setTimeout(() => {
+          try { URL.revokeObjectURL(prevBlob); } catch (_) {}
+        }, 1500);
+      }
       if (audio.readyState >= 2) tryPlay();
       else {
         audio.addEventListener('canplay', tryPlay, { once: true });
@@ -849,6 +857,7 @@ function load(i, autoplay = false) {
       }
     })
     .catch(err => {
+      if (audio._loadGen !== loadGen) return;
       console.warn('[VVV] blob load failed:', err && err.message, playSrc);
     });
 }
@@ -1305,6 +1314,15 @@ audio.addEventListener('timeupdate', () => {
   currentTimeEl.textContent = fmt(audio.currentTime);
   if (Number.isFinite(audio.duration) && audio.duration > 0) {
     setSeekUI((audio.currentTime / audio.duration) * 100);
+    if ('mediaSession' in navigator) {
+      try {
+        navigator.mediaSession.setPositionState({
+          duration: audio.duration,
+          playbackRate: audio.playbackRate || 1,
+          position: Math.min(audio.currentTime, audio.duration)
+        });
+      } catch (_) {}
+    }
   }
 });
 audio.addEventListener('ended', () => {

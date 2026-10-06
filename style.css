@@ -1668,94 +1668,134 @@ audio { display: none; }
 
 @media(prefers-reduced-motion:reduce){.listen-btn:hover .listen-neon,.listen-btn:focus-visible .listen-neon{animation:none!important}.hero-smoke.active i{animation:none;opacity:.35}}
 
-/* ——— Listen button: +7ch title, −15% size, ragged edge, always-on neon ——— */
+/* ——— Listen button: screenshot style — slanted black, pink neon, slow pulse ——— */
 .listen-btn {
-  /* ~15% smaller than previous 112px / 22–42px padding */
-  min-height: 95px;
-  padding: 16px 30px 16px 18px;
-  gap: 12px;
+  min-height: 92px;
+  padding: 16px 34px 16px 20px;
+  gap: 14px;
   max-width: min(520px, 96vw);
-  /* ragged / torn polygon — must match .listen-neon */
-  clip-path: polygon(
-    0% 14%, 3% 2%, 14% 9%, 26% 0%, 39% 11%, 52% 1%, 66% 10%, 79% 0%, 91% 8%, 100% 3%,
-    98% 18%, 100% 34%, 96% 49%, 100% 64%, 97% 79%, 100% 100%,
-    86% 97%, 74% 100%, 61% 94%, 48% 100%, 35% 95%, 22% 100%, 9% 96%, 0% 100%,
-    2% 84%, 0% 69%, 4% 54%, 0% 38%, 3% 24%
-  );
-  transform: none;
-  transform-origin: left center;
+  border: 2px solid #ff2d91 !important;
+  border-radius: 2px;
+  clip-path: none !important;
+  transform: skewX(-12deg);
+  transform-origin: center center;
+  background: #0a0a0f !important;
+  box-shadow:
+    0 0 12px rgba(255, 45, 145, 0.55),
+    0 0 28px rgba(255, 45, 145, 0.35),
+    0 0 48px rgba(255, 45, 145, 0.2),
+    inset 0 0 24px rgba(255, 45, 145, 0.08);
+  animation: listen-pulse 3.2s ease-in-out infinite;
+  overflow: visible;
+}
+/* un-skew text/icon so they stay readable */
+.listen-btn > * {
+  transform: skewX(12deg);
 }
 .listen-btn:hover {
-  transform: translateY(-2px) scale(1.02);
+  transform: skewX(-12deg) translateY(-2px) scale(1.03);
+  filter: brightness(1.08);
+  box-shadow:
+    0 0 16px rgba(255, 45, 145, 0.75),
+    0 0 36px rgba(255, 45, 145, 0.45),
+    0 0 60px rgba(255, 45, 145, 0.28),
+    inset 0 0 28px rgba(255, 45, 145, 0.12);
 }
 .listen-btn:active {
-  transform: scale(0.97);
+  transform: skewX(-12deg) scale(0.98);
+}
+/* Hide traveling neon — solid pink border instead */
+.listen-neon {
+  display: none !important;
 }
 .listen-title {
-  /* was ~260px; +7 character widths for longer track names */
   max-width: calc(260px + 7ch);
-  font-size: clamp(15px, 2.7vw, 22px);
+  font-size: clamp(18px, 3vw, 28px);
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  color: #fff !important;
+  text-shadow: 0 0 18px rgba(255, 45, 145, 0.55);
+  text-transform: uppercase;
 }
 .listen-label {
-  font-size: 9px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.28em;
+  color: rgba(255, 255, 255, 0.7) !important;
 }
 .listen-cta {
-  font-size: 10px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  color: #ff2d91 !important;
+  text-shadow: 0 0 10px rgba(255, 45, 145, 0.7);
+}
+.listen-play {
+  color: #ff2d91 !important;
+  filter: drop-shadow(0 0 10px rgba(255, 45, 145, 0.9)) !important;
 }
 .listen-play svg {
-  width: 40px;
-  height: 40px;
+  width: 42px;
+  height: 42px;
 }
-/* Always-on traveling neon along the ragged edge */
-.listen-neon {
-  opacity: 1 !important;
-  inset: 0;
-  padding: 4px;
-  transform: none !important;
-  clip-path: polygon(
-    0% 14%, 3% 2%, 14% 9%, 26% 0%, 39% 11%, 52% 1%, 66% 10%, 79% 0%, 91% 8%, 100% 3%,
-    98% 18%, 100% 34%, 96% 49%, 100% 64%, 97% 79%, 100% 100%,
-    86% 97%, 74% 100%, 61% 94%, 48% 100%, 35% 95%, 22% 100%, 9% 96%, 0% 100%,
-    2% 84%, 0% 69%, 4% 54%, 0% 38%, 3% 24%
-  );
-  background: conic-gradient(
-    from var(--edge-angle, 0deg),
-    transparent 0deg 270deg,
-    #ff4fa9 292deg,
-    #fff 312deg,
-    #42f5ff 328deg,
-    #ff4fa9 345deg,
-    transparent 360deg
-  );
-  animation: edge-travel 1.6s linear infinite !important;
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
+/* Paint-splash accents (like the reference) */
+.listen-btn::before {
+  content: '';
+  position: absolute;
+  inset: -18% -12%;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 40% 80% at 0% 40%, rgba(255, 45, 145, 0.55), transparent 70%),
+    radial-gradient(ellipse 35% 70% at 100% 60%, rgba(255, 45, 145, 0.5), transparent 70%),
+    radial-gradient(ellipse 25% 40% at 15% 100%, rgba(255, 80, 160, 0.35), transparent 70%);
+  filter: blur(1px);
+  opacity: 0.9;
+  transform: skewX(12deg);
+  animation: none !important;
 }
-.listen-btn:hover .listen-neon,
-.listen-btn:focus-visible .listen-neon {
-  opacity: 1 !important;
-  animation: edge-travel 1.2s linear infinite !important;
-  filter: brightness(1.15);
+.listen-btn::after {
+  display: none !important;
+}
+@keyframes listen-pulse {
+  0%, 100% {
+    box-shadow:
+      0 0 10px rgba(255, 45, 145, 0.4),
+      0 0 22px rgba(255, 45, 145, 0.25),
+      0 0 40px rgba(255, 45, 145, 0.12),
+      inset 0 0 20px rgba(255, 45, 145, 0.06);
+    border-color: rgba(255, 45, 145, 0.75);
+  }
+  50% {
+    box-shadow:
+      0 0 18px rgba(255, 45, 145, 0.85),
+      0 0 40px rgba(255, 45, 145, 0.5),
+      0 0 70px rgba(255, 45, 145, 0.3),
+      inset 0 0 28px rgba(255, 45, 145, 0.14);
+    border-color: rgba(255, 90, 170, 1);
+  }
 }
 @media (max-width: 600px) {
   .listen-btn {
-    min-height: 88px;
-    padding: 14px 16px 14px 12px;
+    min-height: 84px;
+    padding: 14px 20px 14px 14px;
     gap: 10px;
+    transform: skewX(-10deg);
+  }
+  .listen-btn > * {
+    transform: skewX(10deg);
+  }
+  .listen-btn:hover {
+    transform: skewX(-10deg) translateY(-2px) scale(1.02);
   }
   .listen-title {
     max-width: calc(200px + 7ch);
-    font-size: clamp(14px, 4vw, 18px);
-  }
-  .listen-neon {
-    padding: 3px;
+    font-size: clamp(16px, 4.2vw, 22px);
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .listen-neon {
+  .listen-btn {
     animation: none !important;
-    opacity: 0.9 !important;
   }
 }
 
