@@ -126,6 +126,120 @@ async function probeMp3DurationJs(filePath) {
   }
 }
 
+/** Decode ID3 text payload (encoding byte already consumed). */
+function decodeId3Text(buf) {
+  if (!buf || !buf.length) return '';
+  // UTF-16 with BOM
+  if (buf.length >= 2 && ((buf[0] === 0xff && buf[1] === 0xfe) || (buf[0] === 0xfe && buf[1] === 0xff))) {
+    try {
+      return new TextDecoder(buf[0] === 0xff ? 'utf-16le' : 'utf-16be').decode(buf).replace(/\0+$/g, '').trim();
+    } catch {
+      return buf.toString('utf16le').replace(/\0+$/g, '').trim();
+    }
+  }
+  // UTF-8
+  try {
+    return new TextDecoder('utf-8').decode(buf).replace(/\0+$/g, '').trim();
+  } catch {
+    return buf.toString('utf8').replace(/\0+$/g, '').trim();
+  }
+}
+
+/**
+ * Extract unsynchronised lyrics (USLT) from ID3v2 tag at file start.
+ * Returns plain text or null.
+ */
+async function extractId3Lyrics(filePath) {
+  let fh;
+  try {
+    fh = await open(filePath, 'r');
+    const head = Buffer.alloc(10);
+    await fh.read(head, 0, 10, 0);
+    if (head[0] !== 0x49 || head[1] !== 0x44 || head[2] !== 0x33) return null;
+
+    const ver = head[3];
+    const tagSize =
+      ((head[6] & 0x7f) << 21) |
+      ((head[7] & 0x7f) << 14) |
+      ((head[8] & 0x7f) << 7) |
+      (head[9] & 0x7f);
+    if (tagSize < 10 || tagSize > 2 * 1024 * 1024) return null;
+
+    const body = Buffer.alloc(tagSize);
+    await fh.read(body, 0, tagSize, 10);
+
+    let offset = 0;
+    // Skip extended header if present (ID3v2.3/2.4)
+    if (head[5] & 0x40) {
+      if (ver === 4) {
+        const eh =
+          ((body[0] & 0x7f) << 21) |
+          ((body[1] & 0x7f) << 14) |
+          ((body[2] & 0x7f) << 7) |
+          (body[3] & 0x7f);
+        offset = eh;
+      } else {
+        const eh = body.readUInt32BE(0);
+        offset = 4 + eh;
+      }
+    }
+
+    while (offset + 10 < body.length) {
+      const id = body.toString('ascii', offset, offset + 4);
+      if (!/^[A-Z0-9]{4}$/.test(id)) break;
+
+      let frameSize;
+      if (ver === 4) {
+        frameSize =
+          ((body[offset + 4] & 0x7f) << 21) |
+          ((body[offset + 5] & 0x7f) << 14) |
+          ((body[offset + 6] & 0x7f) << 7) |
+          (body[offset + 7] & 0x7f);
+      } else {
+        frameSize = body.readUInt32BE(offset + 4);
+      }
+      if (frameSize <= 0 || offset + 10 + frameSize > body.length) break;
+
+      const data = body.subarray(offset + 10, offset + 10 + frameSize);
+      offset += 10 + frameSize;
+
+      if (id !== 'USLT' && id !== 'ULT') continue;
+      if (data.length < 5) continue;
+
+      const encoding = data[0];
+      // skip language (3 bytes)
+      let p = 4;
+      // skip content descriptor (null-terminated)
+      if (encoding === 0 || encoding === 3) {
+        while (p < data.length && data[p] !== 0) p++;
+        p += 1;
+      } else {
+        while (p + 1 < data.length && !(data[p] === 0 && data[p + 1] === 0)) p += 2;
+        p += 2;
+      }
+      if (p >= data.length) continue;
+
+      let text;
+      if (encoding === 0) text = data.subarray(p).toString('latin1');
+      else if (encoding === 3) text = data.subarray(p).toString('utf8');
+      else text = decodeId3Text(data.subarray(p));
+
+      text = String(text || '')
+        .replace(/\r\n/g, '\n')
+        .replace(/\r/g, '\n')
+        .replace(/\0/g, '')
+        .trim();
+      if (text.length > 12000) text = text.slice(0, 12000);
+      if (text.length > 0) return text;
+    }
+    return null;
+  } catch {
+    return null;
+  } finally {
+    if (fh) await fh.close().catch(() => {});
+  }
+}
+
 /** Duration: pure JS MP3 first, then ffprobe/ffmpeg if available. */
 async function probeDuration(filePath) {
   // 1) Pure JS — works on Cloudflare Pages / any Node without ffmpeg
@@ -376,6 +490,7 @@ for (const dir of albumDirs) {
     const pathParts = [folder, ...file.relativePath.split(/[\\/]/)];
     const fullPath = join(musicDir, folder, file.relativePath);
     const duration = await probeDuration(fullPath);
+    const lyrics = /\.mp3$/i.test(fullPath) ? await extractId3Lyrics(fullPath) : null;
     // Prefer git commit time (real "uploaded to repo") over filesystem mtime (often identical in CI)
     let mtime = null;
     try {
@@ -399,9 +514,10 @@ for (const dir of albumDirs) {
     };
     if (duration != null) track.duration = duration;
     if (mtime != null) track.mtime = mtime;
+    if (lyrics) track.lyrics = lyrics;
     tracks.push(track);
     if (duration != null) {
-      console.log(`  duration ${duration}s — ${folder}/${file.name}`);
+      console.log(`  duration ${duration}s — ${folder}/${file.name}${lyrics ? ' [lyrics]' : ''}`);
     } else {
       console.warn(`  WARNING: no duration for ${folder}/${file.name}`);
     }
@@ -424,7 +540,8 @@ const songs = albums.flatMap(album =>
     cover: album.cover,
     album: album.title,
     ...(track.duration != null ? { duration: track.duration } : {}),
-    ...(track.mtime != null ? { mtime: track.mtime } : {})
+    ...(track.mtime != null ? { mtime: track.mtime } : {}),
+    ...(track.lyrics ? { hasLyrics: true } : {})
   }))
 );
 

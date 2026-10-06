@@ -89,28 +89,38 @@
           <p class="slogan-en slogan-neon-bright">Рок не спрашивает. Рок звучит!</p>
         </div>
 
-        <div class="music-panel">
-          <div class="section-head">
-            <h3 id="music-heading">АЛЬБОМЫ</h3>
-            <button type="button" class="back-btn" id="back-btn" hidden>← АЛЬБОМЫ</button>
-          </div>
-
-          <div id="album-grid" class="album-grid" aria-live="polite"></div>
-
-          <div id="track-panel" class="track-panel" hidden>
-            <div class="album-banner">
-              <button type="button" class="back-btn back-btn-overlay" id="back-btn-overlay" aria-label="К альбомам">←</button>
-              <img id="album-banner-cover" src="" alt="">
-              <div class="album-banner-info">
-                <div class="eyebrow" id="album-banner-year"></div>
-                <h3 id="album-banner-title"></h3>
-                <span id="album-banner-count" class="count"></span>
-              </div>
+        <div class="music-body">
+          <div class="music-panel">
+            <div class="section-head">
+              <h3 id="music-heading">АЛЬБОМЫ</h3>
+              <button type="button" class="back-btn" id="back-btn" hidden>← АЛЬБОМЫ</button>
             </div>
-            <div id="track-list" class="track-list"></div>
+
+            <div id="album-grid" class="album-grid" aria-live="polite"></div>
+
+            <div id="track-panel" class="track-panel" hidden>
+              <div class="album-banner">
+                <button type="button" class="back-btn back-btn-overlay" id="back-btn-overlay" aria-label="К альбомам">←</button>
+                <img id="album-banner-cover" src="" alt="">
+                <div class="album-banner-info">
+                  <div class="eyebrow" id="album-banner-year"></div>
+                  <h3 id="album-banner-title"></h3>
+                  <span id="album-banner-count" class="count"></span>
+                </div>
+              </div>
+              <div id="track-list" class="track-list"></div>
+            </div>
+
+            <div id="empty" class="empty" hidden>Добавьте альбомы в <b>albums.json</b></div>
           </div>
 
-          <div id="empty" class="empty" hidden>Добавьте альбомы в <b>albums.json</b></div>
+          <aside id="lyrics-panel" class="lyrics-panel" hidden aria-hidden="true">
+            <div class="lyrics-panel-head">
+              <h4 id="lyrics-title">Текст</h4>
+              <button type="button" class="lyrics-close" id="lyrics-close" aria-label="Закрыть текст">×</button>
+            </div>
+            <pre id="lyrics-body" class="lyrics-body"></pre>
+          </aside>
         </div>
 
         <footer class="site-footer">

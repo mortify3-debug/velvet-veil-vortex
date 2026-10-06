@@ -203,12 +203,17 @@ function sanitizeAlbums(data) {
           : undefined;
       // Seed client cache so list shows duration immediately
       if (src && duration != null) durationCache.set(src, duration);
+      const lyrics =
+        typeof t?.lyrics === 'string' && t.lyrics.trim().length
+          ? t.lyrics.trim().slice(0, 12000)
+          : undefined;
       return {
         title: safeText(t?.title || 'Трек', 120),
         src,
         cover,
         ...(duration != null ? { duration } : {}),
-        ...(mtime != null ? { mtime } : {})
+        ...(mtime != null ? { mtime } : {}),
+        ...(lyrics ? { lyrics } : {})
       };
     }).filter(t => !!t.src);
     // A track whose title matches its album is the album's opening track.
@@ -565,6 +570,7 @@ function renderTracksInto(container) {
         <span class="track-duration" data-duration="${i}">—:—</span>
       </div>
       <div class="track-actions">
+        ${t.lyrics ? `<button type="button" class="lyrics-btn" data-lyrics-index="${i}" aria-label="Текст песни" title="Текст">T</button>` : ''}
         <div class="track-vol" data-vol-row="${i}">
           <button type="button" class="vol-icon track-mute" aria-label="Без звука" title="Mute">🔊</button>
           <div class="vol-bar track-vol-bar" role="slider" aria-label="Громкость" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${volPct}" tabindex="0">
@@ -652,12 +658,48 @@ function renderTracksInto(container) {
       };
     }
 
+    const lyricsBtn = row.querySelector('.lyrics-btn');
+    if (lyricsBtn) {
+      lyricsBtn.onclick = e => {
+        e.preventDefault();
+        e.stopPropagation();
+        openLyricsPanel(i);
+      };
+    }
+
     const volBarEl = row.querySelector('.track-vol-bar');
     if (volBarEl) bindTrackVolume(volBarEl);
   });
 
   updateMuteIcon();
   updatePlayButtons();
+}
+
+function openLyricsPanel(trackIndex) {
+  const t = tracks[trackIndex];
+  const panel = document.getElementById('lyrics-panel');
+  const body = document.getElementById('lyrics-body');
+  const title = document.getElementById('lyrics-title');
+  if (!panel || !body || !t || !t.lyrics) return;
+  if (title) title.textContent = t.title || 'Текст';
+  body.textContent = t.lyrics;
+  panel.hidden = false;
+  panel.setAttribute('aria-hidden', 'false');
+  document.querySelectorAll('.lyrics-btn').forEach(btn => {
+    btn.classList.toggle('is-active', Number(btn.dataset.lyricsIndex) === trackIndex);
+  });
+  const stage = document.querySelector('.music-stage');
+  if (stage) stage.classList.add('has-lyrics');
+}
+
+function closeLyricsPanel() {
+  const panel = document.getElementById('lyrics-panel');
+  if (!panel) return;
+  panel.hidden = true;
+  panel.setAttribute('aria-hidden', 'true');
+  document.querySelectorAll('.lyrics-btn.is-active').forEach(btn => btn.classList.remove('is-active'));
+  const stage = document.querySelector('.music-stage');
+  if (stage) stage.classList.remove('has-lyrics');
 }
 
 function renderTracks() {
@@ -1285,6 +1327,7 @@ if (listenBtn) {
 }
 
 function goBackToAlbums() {
+  closeLyricsPanel();
   renderAlbums(-1);
   const stage = document.querySelector('.music-stage');
   if (stage) stage.scrollTop = 0;
@@ -1293,6 +1336,8 @@ function goBackToAlbums() {
 if (backBtn) backBtn.addEventListener('click', goBackToAlbums);
 const backOverlayBtn = document.getElementById('back-btn-overlay');
 if (backOverlayBtn) backOverlayBtn.addEventListener('click', goBackToAlbums);
+const lyricsCloseBtn = document.getElementById('lyrics-close');
+if (lyricsCloseBtn) lyricsCloseBtn.addEventListener('click', closeLyricsPanel);
 
 playBtn.onclick = () => {
   if (current < 0) {

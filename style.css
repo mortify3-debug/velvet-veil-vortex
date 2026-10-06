@@ -1885,3 +1885,118 @@ audio { display: none; }
 .stop-btn { font-size: 0.95em; }
 .stop-btn:hover { color: var(--pink, #ff2d91); }
 
+
+/* ——— Lyrics panel (desktop right of track list) ——— */
+.music-body {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  width: 100%;
+}
+.music-body .music-panel {
+  flex: 1;
+  min-width: 0;
+}
+.music-stage {
+  max-width: 1100px;
+}
+.lyrics-panel {
+  width: min(340px, 34vw);
+  flex-shrink: 0;
+  position: sticky;
+  top: 12px;
+  max-height: calc(100vh - 140px);
+  display: flex;
+  flex-direction: column;
+  background: rgba(8, 8, 14, 0.55);
+  border: 1px solid rgba(255, 45, 145, 0.22);
+  border-radius: 14px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+}
+.lyrics-panel[hidden] {
+  display: none !important;
+}
+.lyrics-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.lyrics-panel-head h4 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #fff;
+}
+.lyrics-close {
+  border: 0;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 4px;
+}
+.lyrics-close:hover {
+  color: #ff2d91;
+}
+.lyrics-body {
+  margin: 0;
+  padding: 14px 16px 20px;
+  overflow-y: auto;
+  flex: 1;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.88);
+}
+.lyrics-btn {
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 45, 145, 0.45);
+  border-radius: 5px;
+  background: rgba(255, 45, 145, 0.12);
+  color: #ff7ec8;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.lyrics-btn:hover,
+.lyrics-btn.is-active {
+  background: rgba(255, 45, 145, 0.35);
+  border-color: #ff2d91;
+  color: #fff;
+}
+.track-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+@media (max-width: 900px) {
+  .music-body {
+    flex-direction: column;
+  }
+  .lyrics-panel {
+    width: 100%;
+    max-height: 42vh;
+    position: relative;
+    top: 0;
+  }
+}
