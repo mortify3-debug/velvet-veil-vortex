@@ -376,11 +376,29 @@ for (const dir of albumDirs) {
     const pathParts = [folder, ...file.relativePath.split(/[\\/]/)];
     const fullPath = join(musicDir, folder, file.relativePath);
     const duration = await probeDuration(fullPath);
+    // Prefer git commit time (real "uploaded to repo") over filesystem mtime (often identical in CI)
+    let mtime = null;
+    try {
+      const { stdout } = await execFileAsync(
+        'git',
+        ['log', '-1', '--format=%ct', '--', fullPath],
+        { timeout: 10000 }
+      );
+      const sec = parseInt(String(stdout).trim(), 10);
+      if (Number.isFinite(sec) && sec > 0) mtime = sec * 1000;
+    } catch (_) {}
+    if (mtime == null) {
+      try {
+        const st = await stat(fullPath);
+        mtime = st.mtimeMs;
+      } catch (_) {}
+    }
     const track = {
       title: makeTitle(file.name),
       src: `./music/${encodePath(...pathParts)}`
     };
     if (duration != null) track.duration = duration;
+    if (mtime != null) track.mtime = mtime;
     tracks.push(track);
     if (duration != null) {
       console.log(`  duration ${duration}s — ${folder}/${file.name}`);
@@ -405,7 +423,8 @@ const songs = albums.flatMap(album =>
     src: track.src,
     cover: album.cover,
     album: album.title,
-    ...(track.duration != null ? { duration: track.duration } : {})
+    ...(track.duration != null ? { duration: track.duration } : {}),
+    ...(track.mtime != null ? { mtime: track.mtime } : {})
   }))
 );
 

@@ -1847,3 +1847,8 @@ audio { display: none; }
   overflow: visible;
 }
 
+
+/* Stop control */
+.stop-btn { font-size: 0.95em; }
+.stop-btn:hover { color: var(--pink, #ff2d91); }
+

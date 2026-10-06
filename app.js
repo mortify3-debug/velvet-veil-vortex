@@ -6,6 +6,7 @@ const empty = document.getElementById('empty');
 const backBtn = document.getElementById('back-btn');
 const musicHeading = document.getElementById('music-heading');
 const playBtn = document.getElementById('play');
+const stopBtn = document.getElementById('stop');
 const prevBtn = document.getElementById('prev');
 const nextBtn = document.getElementById('next');
 const shuffleBtn = document.getElementById('shuffle');
@@ -196,13 +197,18 @@ function sanitizeAlbums(data) {
         typeof t?.duration === 'number' && Number.isFinite(t.duration) && t.duration > 0
           ? t.duration
           : undefined;
+      const mtime =
+        typeof t?.mtime === 'number' && Number.isFinite(t.mtime) && t.mtime > 0
+          ? t.mtime
+          : undefined;
       // Seed client cache so list shows duration immediately
       if (src && duration != null) durationCache.set(src, duration);
       return {
         title: safeText(t?.title || 'Трек', 120),
         src,
         cover,
-        ...(duration != null ? { duration } : {})
+        ...(duration != null ? { duration } : {}),
+        ...(mtime != null ? { mtime } : {})
       };
     }).filter(t => !!t.src);
     // A track whose title matches its album is the album's opening track.
@@ -1154,22 +1160,28 @@ if (snapMain) {
 }
 
 function getNewestTrackInfo() {
-  /* Newest album = first in albums[] (albumOrder has newest first). Last track ≈ newest file. */
+  /* Prefer track with highest mtime (real last upload). Fallback: first album, last track. */
   if (!albums.length) return null;
-  for (let i = 0; i < albums.length; i++) {
-    const a = albums[i];
+  let best = null;
+  for (let ai = 0; ai < albums.length; ai++) {
+    const a = albums[ai];
     const list = a.tracks || [];
-    if (!list.length) continue;
-    const trackIndex = list.length - 1;
-    const t = list[trackIndex];
-    return {
-      albumIndex: i,
-      trackIndex,
-      title: t.title || 'NEW TRACK',
-      albumTitle: a.title || '',
-      label: list.length === 1 ? 'NEW SINGLE' : 'NEW TRACK'
-    };
+    for (let ti = 0; ti < list.length; ti++) {
+      const t = list[ti];
+      const mt = typeof t.mtime === 'number' ? t.mtime : -1;
+      if (!best || mt > best.mtime) {
+        best = {
+          albumIndex: ai,
+          trackIndex: ti,
+          title: t.title || 'NEW TRACK',
+          albumTitle: a.title || '',
+          label: list.length === 1 ? 'NEW SINGLE' : 'NEW TRACK',
+          mtime: mt
+        };
+      }
+    }
   }
+  if (best) return best;
   return {
     albumIndex: 0,
     trackIndex: -1,
@@ -1252,6 +1264,31 @@ playBtn.onclick = () => {
   if (audio.paused) audio.play().catch(err => console.warn(err));
   else audio.pause();
 };
+
+if (stopBtn) {
+  stopBtn.onclick = () => {
+    audio.pause();
+    try {
+      audio.currentTime = 0;
+    } catch (_) {}
+    setSeekUI(0);
+    if (currentTimeEl) currentTimeEl.textContent = '0:00';
+    updatePlayButtons();
+    if (playBtn) playBtn.textContent = '▶';
+    if ('mediaSession' in navigator) {
+      try {
+        navigator.mediaSession.playbackState = 'paused';
+        if (Number.isFinite(audio.duration) && audio.duration > 0) {
+          navigator.mediaSession.setPositionState({
+            duration: audio.duration,
+            playbackRate: 1,
+            position: 0
+          });
+        }
+      } catch (_) {}
+    }
+  };
+}
 
 prevBtn.onclick = () => {
   if (!tracks.length) return;
