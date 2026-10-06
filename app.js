@@ -300,13 +300,19 @@ let isMuted = false;
 const volMuteBtn = document.getElementById('vol-mute');
 
 function updateMuteIcon() {
-  if (!volMuteBtn) return;
   const muted = isMuted || audio.volume === 0;
-  volMuteBtn.textContent = muted ? '🔇' : '🔊';
-  volMuteBtn.setAttribute('aria-label', muted ? 'Включить звук' : 'Без звука');
-  volMuteBtn.setAttribute('title', muted ? 'Unmute' : 'Mute');
-  volMuteBtn.classList.toggle('is-muted', muted);
-  volMuteBtn.setAttribute('aria-pressed', String(muted));
+  const icon = muted ? '🔇' : '🔊';
+  const label = muted ? 'Включить звук' : 'Без звука';
+  const title = muted ? 'Unmute' : 'Mute';
+  document.querySelectorAll('.vol-icon').forEach(btn => {
+    btn.textContent = icon;
+    if (btn.tagName === 'BUTTON' || btn.getAttribute('role') === 'button') {
+      btn.setAttribute('aria-label', label);
+      btn.setAttribute('title', title);
+      btn.setAttribute('aria-pressed', String(muted));
+    }
+    btn.classList.toggle('is-muted', muted);
+  });
 }
 
 function setVolUI(percent, fromUserSlider = true) {
@@ -560,7 +566,7 @@ function renderTracksInto(container) {
       </div>
       <div class="track-actions">
         <div class="track-vol" data-vol-row="${i}">
-          <span class="vol-icon" aria-hidden="true">🔊</span>
+          <button type="button" class="vol-icon track-mute" aria-label="Без звука" title="Mute">🔊</button>
           <div class="vol-bar track-vol-bar" role="slider" aria-label="Громкость" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${volPct}" tabindex="0">
             <div class="vol-fill"></div>
           </div>
@@ -633,14 +639,24 @@ function renderTracksInto(container) {
       toggle();
     };
     row.onclick = e => {
-      if (e.target.closest('a') || e.target.closest('.track-vol')) return;
+      if (e.target.closest('a') || e.target.closest('.track-vol') || e.target.closest('.vol-icon')) return;
       toggle();
     };
+
+    const muteBtn = row.querySelector('.track-mute');
+    if (muteBtn) {
+      muteBtn.onclick = e => {
+        e.preventDefault();
+        e.stopPropagation();
+        toggleMute();
+      };
+    }
 
     const volBarEl = row.querySelector('.track-vol-bar');
     if (volBarEl) bindTrackVolume(volBarEl);
   });
 
+  updateMuteIcon();
   updatePlayButtons();
 }
 
