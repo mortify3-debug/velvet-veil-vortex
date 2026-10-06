@@ -295,16 +295,48 @@ function setSeekUI(percent) {
   if (seekBar) seekBar.setAttribute('aria-valuenow', String(Math.round(p)));
 }
 
-function setVolUI(percent) {
+let volBeforeMute = 90;
+let isMuted = false;
+const volMuteBtn = document.getElementById('vol-mute');
+
+function updateMuteIcon() {
+  if (!volMuteBtn) return;
+  const muted = isMuted || audio.volume === 0;
+  volMuteBtn.textContent = muted ? '🔇' : '🔊';
+  volMuteBtn.setAttribute('aria-label', muted ? 'Включить звук' : 'Без звука');
+  volMuteBtn.setAttribute('title', muted ? 'Unmute' : 'Mute');
+  volMuteBtn.classList.toggle('is-muted', muted);
+  volMuteBtn.setAttribute('aria-pressed', String(muted));
+}
+
+function setVolUI(percent, fromUserSlider = true) {
   const p = Math.max(0, Math.min(100, percent));
   if (volFill) volFill.style.width = p + '%';
   if (volBar) volBar.setAttribute('aria-valuenow', String(Math.round(p)));
   audio.volume = p / 100;
+  if (fromUserSlider && p > 0) {
+    isMuted = false;
+    volBeforeMute = p;
+  }
+  if (p === 0) isMuted = true;
   document.querySelectorAll('.track-vol-bar').forEach(bar => {
     const fill = bar.querySelector('.vol-fill');
     if (fill) fill.style.width = p + '%';
     bar.setAttribute('aria-valuenow', String(Math.round(p)));
   });
+  updateMuteIcon();
+}
+
+function toggleMute() {
+  if (isMuted || audio.volume === 0) {
+    const restore = volBeforeMute > 0 ? volBeforeMute : 90;
+    isMuted = false;
+    setVolUI(restore, false);
+  } else {
+    volBeforeMute = Math.round((audio.volume || 0) * 100) || volBeforeMute || 90;
+    isMuted = true;
+    setVolUI(0, false);
+  }
 }
 
 function percentFromEvent(el, e) {
@@ -1438,6 +1470,13 @@ if (volBar) {
   volBar.addEventListener('pointerup', onVolEnd);
   volBar.addEventListener('pointercancel', onVolEnd);
   setVolUI(90);
+}
+if (volMuteBtn) {
+  volMuteBtn.addEventListener('click', e => {
+    e.preventDefault();
+    e.stopPropagation();
+    toggleMute();
+  });
 }
 
 setupMediaSessionHandlers();

@@ -1119,9 +1119,30 @@ body {
 }
 
 .vol-icon {
-  font-size: 12px;
-  opacity: 0.7;
+  font-size: 14px;
+  opacity: 0.85;
   flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  border-radius: 6px;
+  line-height: 1;
+  transition: opacity 0.15s, color 0.15s, background 0.15s;
+}
+.vol-icon:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.08);
+}
+.vol-icon.is-muted {
+  opacity: 1;
+  color: var(--pink, #ff2d91);
 }
 
 .vol-bar {
