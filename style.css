@@ -1668,133 +1668,169 @@ audio { display: none; }
 
 @media(prefers-reduced-motion:reduce){.listen-btn:hover .listen-neon,.listen-btn:focus-visible .listen-neon{animation:none!important}.hero-smoke.active i{animation:none;opacity:.35}}
 
-/* ——— Listen button: screenshot style — slanted black, pink neon, slow pulse ——— */
+/* ——— Listen button: reference — black slab, pink paint neon edges, no hard border ——— */
 .listen-btn {
-  min-height: 92px;
-  padding: 16px 34px 16px 20px;
-  gap: 14px;
-  max-width: min(520px, 96vw);
-  border: 2px solid #ff2d91 !important;
-  border-radius: 2px;
+  min-height: 96px;
+  padding: 18px 40px 18px 22px;
+  gap: 16px;
+  max-width: min(540px, 96vw);
+  border: 0 !important;
+  border-radius: 0;
   clip-path: none !important;
-  transform: skewX(-12deg);
+  transform: skewX(-14deg);
   transform-origin: center center;
-  background: #0a0a0f !important;
-  box-shadow:
-    0 0 12px rgba(255, 45, 145, 0.55),
-    0 0 28px rgba(255, 45, 145, 0.35),
-    0 0 48px rgba(255, 45, 145, 0.2),
-    inset 0 0 24px rgba(255, 45, 145, 0.08);
-  animation: listen-pulse 3.2s ease-in-out infinite;
+  background: #050508 !important;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
   overflow: visible;
+  isolation: isolate;
+  animation: none !important;
 }
-/* un-skew text/icon so they stay readable */
 .listen-btn > * {
-  transform: skewX(12deg);
+  transform: skewX(14deg);
 }
 .listen-btn:hover {
-  transform: skewX(-12deg) translateY(-2px) scale(1.03);
-  filter: brightness(1.08);
-  box-shadow:
-    0 0 16px rgba(255, 45, 145, 0.75),
-    0 0 36px rgba(255, 45, 145, 0.45),
-    0 0 60px rgba(255, 45, 145, 0.28),
-    inset 0 0 28px rgba(255, 45, 145, 0.12);
+  transform: skewX(-14deg) translateY(-2px) scale(1.02);
+  filter: brightness(1.05);
 }
 .listen-btn:active {
-  transform: skewX(-12deg) scale(0.98);
+  transform: skewX(-14deg) scale(0.98);
 }
-/* Hide traveling neon — solid pink border instead */
 .listen-neon {
   display: none !important;
 }
-.listen-title {
-  max-width: calc(260px + 7ch);
-  font-size: clamp(18px, 3vw, 28px);
-  font-weight: 900;
-  letter-spacing: 0.04em;
-  color: #fff !important;
-  text-shadow: 0 0 18px rgba(255, 45, 145, 0.55);
-  text-transform: uppercase;
-}
-.listen-label {
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.28em;
-  color: rgba(255, 255, 255, 0.7) !important;
-}
-.listen-cta {
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.2em;
-  color: #ff2d91 !important;
-  text-shadow: 0 0 10px rgba(255, 45, 145, 0.7);
-}
-.listen-play {
-  color: #ff2d91 !important;
-  filter: drop-shadow(0 0 10px rgba(255, 45, 145, 0.9)) !important;
-}
-.listen-play svg {
-  width: 42px;
-  height: 42px;
-}
-/* Paint-splash accents (like the reference) */
+
+/* Pink paint splash glow only on the neon edges — slow bright pulse */
 .listen-btn::before {
   content: '';
   position: absolute;
-  inset: -18% -12%;
-  z-index: -1;
+  inset: -24% -20%;
+  z-index: 0;
   pointer-events: none;
+  transform: skewX(14deg);
   background:
-    radial-gradient(ellipse 40% 80% at 0% 40%, rgba(255, 45, 145, 0.55), transparent 70%),
-    radial-gradient(ellipse 35% 70% at 100% 60%, rgba(255, 45, 145, 0.5), transparent 70%),
-    radial-gradient(ellipse 25% 40% at 15% 100%, rgba(255, 80, 160, 0.35), transparent 70%);
-  filter: blur(1px);
-  opacity: 0.9;
-  transform: skewX(12deg);
-  animation: none !important;
+    radial-gradient(ellipse 58% 95% at 1% 38%, rgba(255, 35, 135, 1) 0%, rgba(255, 45, 145, 0.55) 26%, transparent 58%),
+    radial-gradient(ellipse 42% 60% at 7% 78%, rgba(255, 55, 155, 0.85) 0%, transparent 62%),
+    radial-gradient(ellipse 52% 90% at 99% 58%, rgba(255, 35, 135, 1) 0%, rgba(255, 45, 145, 0.5) 28%, transparent 58%),
+    radial-gradient(ellipse 38% 55% at 93% 22%, rgba(255, 70, 170, 0.8) 0%, transparent 60%),
+    radial-gradient(ellipse 28% 75% at -2% 50%, rgba(255, 45, 145, 0.4), transparent 70%),
+    radial-gradient(ellipse 28% 75% at 102% 50%, rgba(255, 45, 145, 0.4), transparent 70%);
+  filter: blur(0.6px);
+  opacity: 0.75;
+  animation: listen-splash-pulse 5s ease-in-out infinite;
 }
+/* Solid black body so splash stays outside edges */
 .listen-btn::after {
-  display: none !important;
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: #050508;
 }
-@keyframes listen-pulse {
+
+.listen-play,
+.listen-copy {
+  position: relative;
+  z-index: 2;
+}
+
+.listen-title {
+  max-width: calc(280px + 7ch);
+  font-size: clamp(20px, 3.2vw, 30px);
+  font-weight: 900;
+  letter-spacing: 0.03em;
+  color: #fff !important;
+  text-shadow: none;
+  text-transform: uppercase;
+  line-height: 1.05;
+}
+.listen-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.32em;
+  color: rgba(255, 255, 255, 0.78) !important;
+  text-shadow: none;
+}
+.listen-cta {
+  margin-top: 4px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.22em;
+  color: #ff2d91 !important;
+  text-shadow: 0 0 14px rgba(255, 45, 145, 0.85);
+}
+
+/* Circular PLAY icon with triangle — pink neon glow */
+.listen-play {
+  color: #ff2d91 !important;
+  filter: none !important;
+  animation: listen-icon-pulse 5s ease-in-out infinite;
+}
+.listen-play svg {
+  width: 48px;
+  height: 48px;
+  display: block;
+  filter:
+    drop-shadow(0 0 5px rgba(255, 45, 145, 1))
+    drop-shadow(0 0 14px rgba(255, 45, 145, 0.95))
+    drop-shadow(0 0 30px rgba(255, 45, 145, 0.65));
+}
+.listen-play svg circle {
+  stroke: #ff2d91;
+  stroke-width: 2.5;
+  fill: none;
+}
+.listen-play svg path {
+  fill: #ff2d91;
+}
+
+@keyframes listen-splash-pulse {
   0%, 100% {
-    box-shadow:
-      0 0 10px rgba(255, 45, 145, 0.4),
-      0 0 22px rgba(255, 45, 145, 0.25),
-      0 0 40px rgba(255, 45, 145, 0.12),
-      inset 0 0 20px rgba(255, 45, 145, 0.06);
-    border-color: rgba(255, 45, 145, 0.75);
+    opacity: 0.5;
+    filter: blur(0.6px) brightness(0.9);
   }
   50% {
-    box-shadow:
-      0 0 18px rgba(255, 45, 145, 0.85),
-      0 0 40px rgba(255, 45, 145, 0.5),
-      0 0 70px rgba(255, 45, 145, 0.3),
-      inset 0 0 28px rgba(255, 45, 145, 0.14);
-    border-color: rgba(255, 90, 170, 1);
+    opacity: 1;
+    filter: blur(0.6px) brightness(1.35);
   }
 }
+@keyframes listen-icon-pulse {
+  0%, 100% {
+    filter: brightness(0.85);
+  }
+  50% {
+    filter: brightness(1.4);
+  }
+}
+
 @media (max-width: 600px) {
   .listen-btn {
-    min-height: 84px;
-    padding: 14px 20px 14px 14px;
-    gap: 10px;
-    transform: skewX(-10deg);
+    min-height: 86px;
+    padding: 14px 22px 14px 14px;
+    gap: 12px;
+    transform: skewX(-12deg);
   }
   .listen-btn > * {
-    transform: skewX(10deg);
+    transform: skewX(12deg);
   }
   .listen-btn:hover {
-    transform: skewX(-10deg) translateY(-2px) scale(1.02);
+    transform: skewX(-12deg) translateY(-2px) scale(1.02);
+  }
+  .listen-btn::before {
+    transform: skewX(12deg);
   }
   .listen-title {
-    max-width: calc(200px + 7ch);
-    font-size: clamp(16px, 4.2vw, 22px);
+    max-width: calc(210px + 7ch);
+    font-size: clamp(17px, 4.4vw, 24px);
+  }
+  .listen-play svg {
+    width: 40px;
+    height: 40px;
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .listen-btn {
+  .listen-btn::before,
+  .listen-play {
     animation: none !important;
   }
 }
