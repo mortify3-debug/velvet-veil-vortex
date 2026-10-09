@@ -5,6 +5,8 @@ const trackList = document.getElementById('track-list');
 const empty = document.getElementById('empty');
 const backBtn = document.getElementById('back-btn');
 const musicHeading = document.getElementById('music-heading');
+const albumViewToggle = document.getElementById('album-view-toggle');
+let simpleAlbumList = false;
 const playBtn = document.getElementById('play');
 const stopBtn = document.getElementById('stop');
 const prevBtn = document.getElementById('prev');
@@ -403,6 +405,12 @@ function trackCountLabel(n) {
 
 function renderAlbums(expandIndex = -1) {
   albumGrid.innerHTML = '';
+  albumGrid.classList.toggle('simple-album-list', simpleAlbumList);
+  if (albumViewToggle) {
+    albumViewToggle.setAttribute('aria-pressed', simpleAlbumList ? 'true' : 'false');
+    albumViewToggle.textContent = simpleAlbumList ? '▦ КАРТОЧКИ' : '☷ ПРОСТОЙ СПИСОК';
+    albumViewToggle.title = simpleAlbumList ? 'Показать альбомы карточками' : 'Показать альбомы простым списком';
+  }
   const hasAlbums = albums.length > 0;
   empty.hidden = hasAlbums;
   albumGrid.hidden = false;
@@ -1137,6 +1145,13 @@ function smoothGoTo(section, durationMs = 700) {
   smoothScrollToY(section.offsetTop, durationMs);
 }
 
+if (albumViewToggle) {
+  albumViewToggle.addEventListener('click', () => {
+    simpleAlbumList = !simpleAlbumList;
+    renderAlbums(-1);
+  });
+}
+
 function goToMusic() {
   if (!musicSection || !snapMain) {
     setNav('music');
@@ -1153,19 +1168,34 @@ function goToMusic() {
   setNav('music');
 }
 
-/* Page zoom: Ctrl/Cmd + mouse wheel (desktop). Does not switch covers. */
+/* Page zoom: Ctrl/Cmd + wheel or keyboard; show current percentage and range. */
 (function setupPageZoom() {
   let pageZoom = 1;
   const ZOOM_MIN = 0.5;
   const ZOOM_MAX = 2.5;
   const ZOOM_STEP = 0.1;
+  const root = document.documentElement;
+  const indicator = document.getElementById('zoom-indicator');
+  const percent = document.getElementById('zoom-percent');
+  const meterFill = document.getElementById('zoom-meter-fill');
+  let indicatorTimer = null;
+
+  const showZoom = () => {
+    if (!indicator || !percent || !meterFill) return;
+    const value = Math.round(pageZoom * 100);
+    percent.textContent = `${value}%`;
+    meterFill.style.width = `${((pageZoom - ZOOM_MIN) / (ZOOM_MAX - ZOOM_MIN)) * 100}%`;
+    indicator.hidden = false;
+    indicator.classList.remove('zoom-indicator-pulse');
+    void indicator.offsetWidth;
+    indicator.classList.add('zoom-indicator-pulse');
+    clearTimeout(indicatorTimer);
+    indicatorTimer = setTimeout(() => { indicator.hidden = true; }, 1800);
+  };
 
   const applyZoom = (z) => {
-    pageZoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z));
-    const root = document.documentElement;
-    /* CSS zoom — Chromium / Safari */
+    pageZoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Math.round(z * 10) / 10));
     root.style.zoom = String(pageZoom);
-    /* Firefox fallback via transform on body */
     if (!('zoom' in root.style) || /firefox/i.test(navigator.userAgent)) {
       root.style.zoom = '';
       document.body.style.transformOrigin = '0 0';
@@ -1173,27 +1203,23 @@ function goToMusic() {
       document.body.style.width = pageZoom === 1 ? '' : `${100 / pageZoom}%`;
       document.body.style.height = pageZoom === 1 ? '' : `${100 / pageZoom}%`;
     }
+    showZoom();
   };
 
   document.addEventListener('wheel', e => {
     if (!(e.ctrlKey || e.metaKey)) return;
     e.preventDefault();
-    const dir = e.deltaY > 0 ? -ZOOM_STEP : ZOOM_STEP;
-    applyZoom(pageZoom + dir);
+    applyZoom(pageZoom + (e.deltaY > 0 ? -ZOOM_STEP : ZOOM_STEP));
   }, { passive: false, capture: true });
 
-  /* Keyboard zoom shortcuts */
   document.addEventListener('keydown', e => {
     if (!(e.ctrlKey || e.metaKey)) return;
     if (e.key === '=' || e.key === '+') {
-      e.preventDefault();
-      applyZoom(pageZoom + ZOOM_STEP);
+      e.preventDefault(); applyZoom(pageZoom + ZOOM_STEP);
     } else if (e.key === '-') {
-      e.preventDefault();
-      applyZoom(pageZoom - ZOOM_STEP);
+      e.preventDefault(); applyZoom(pageZoom - ZOOM_STEP);
     } else if (e.key === '0') {
-      e.preventDefault();
-      applyZoom(1);
+      e.preventDefault(); applyZoom(1);
     }
   });
 })();

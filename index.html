@@ -93,7 +93,10 @@
           <div class="music-panel">
             <div class="section-head">
               <h3 id="music-heading">АЛЬБОМЫ</h3>
-              <button type="button" class="back-btn" id="back-btn" hidden>← АЛЬБОМЫ</button>
+              <div class="album-head-actions">
+                <button type="button" class="back-btn album-view-toggle" id="album-view-toggle" aria-pressed="false" title="Переключить вид альбомов">☷ ПРОСТОЙ СПИСОК</button>
+                <button type="button" class="back-btn" id="back-btn" hidden>← АЛЬБОМЫ</button>
+              </div>
             </div>
 
             <div id="album-grid" class="album-grid" aria-live="polite"></div>
@@ -181,6 +184,11 @@
     <audio id="audio" preload="auto"></audio>
   </div>
 
+  <div id="zoom-indicator" class="zoom-indicator" role="status" aria-live="polite" aria-label="Масштаб страницы" hidden>
+    <div class="zoom-indicator-top"><span>МАСШТАБ</span><strong id="zoom-percent">100%</strong></div>
+    <div class="zoom-meter" aria-hidden="true"><span id="zoom-meter-fill"></span></div>
+    <div class="zoom-indicator-hint">Ctrl + колесо · Ctrl + 0 — сброс</div>
+  </div>
   <script src="./app.js"></script>
 </body>
 </html>
