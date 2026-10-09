@@ -408,8 +408,12 @@ function renderAlbums(expandIndex = -1) {
   albumGrid.classList.toggle('simple-album-list', simpleAlbumList);
   if (albumViewToggle) {
     albumViewToggle.setAttribute('aria-pressed', simpleAlbumList ? 'true' : 'false');
-    albumViewToggle.textContent = simpleAlbumList ? '▦ КАРТОЧКИ' : '☷ ПРОСТОЙ СПИСОК';
-    albumViewToggle.title = simpleAlbumList ? 'Показать альбомы карточками' : 'Показать альбомы простым списком';
+    /* The icon shows the view that will be activated when clicked. */
+    const gridIcon = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>';
+    const listIcon = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 6h16M4 12h16M4 18h16"/></svg>';
+    albumViewToggle.innerHTML = simpleAlbumList ? gridIcon : listIcon;
+    albumViewToggle.setAttribute('aria-label', simpleAlbumList ? 'Переключить на карточки альбомов' : 'Переключить на список альбомов');
+    albumViewToggle.title = simpleAlbumList ? 'Показать альбомы карточками' : 'Показать альбомы списком';
   }
   const hasAlbums = albums.length > 0;
   empty.hidden = hasAlbums;
