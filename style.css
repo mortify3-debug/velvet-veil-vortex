@@ -827,11 +827,39 @@ body {
   border: 1px solid transparent;
   border-radius: 12px;
   cursor: pointer;
-  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s, opacity 0.15s, transform 0.15s;
   -webkit-tap-highlight-color: transparent;
+  user-select: none;
 }
 
 .track:hover { background: rgba(255, 255, 255, 0.05); }
+
+.track-drag-handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  font-size: 14px;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.35);
+  cursor: grab;
+  flex-shrink: 0;
+  letter-spacing: -2px;
+  user-select: none;
+}
+.track:hover .track-drag-handle,
+.track.is-dragging .track-drag-handle {
+  color: rgba(255, 255, 255, 0.7);
+}
+.track.is-dragging {
+  opacity: 0.45;
+  cursor: grabbing;
+}
+.track.drag-over {
+  border-color: rgba(46, 240, 255, 0.55);
+  box-shadow: inset 0 2px 0 rgba(46, 240, 255, 0.65);
+  background: rgba(46, 240, 255, 0.08);
+}
 
 .track.active {
   border-color: rgba(255, 45, 145, 0.7);
@@ -2037,6 +2065,48 @@ audio { display: none; }
 }
 
 /* Ultra-compact simple list: one row per album, title left and track count right. */
+/* List mode: album list rises over the slogan so the neon line shows through */
+.music-stage.simple-list-mode .music-brand,
+.music-stage:has(.album-grid.simple-album-list) .music-brand {
+  position: relative;
+  z-index: 1;
+  pointer-events: none;
+  margin-bottom: 0;
+}
+.music-stage.simple-list-mode .music-body,
+.music-stage:has(.album-grid.simple-album-list) .music-body {
+  position: relative;
+  z-index: 2;
+  margin-top: -52px; /* overlap slogan area */
+}
+.music-stage.simple-list-mode .music-panel,
+.music-stage:has(.album-grid.simple-album-list) .music-panel {
+  background: rgba(8, 8, 14, 0.28);
+  border-color: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+.music-stage.simple-list-mode .section-head,
+.music-stage:has(.album-grid.simple-album-list) .section-head {
+  background: transparent;
+}
+.music-stage.simple-list-mode .album-grid.simple-album-list .album-card,
+.music-stage.simple-list-mode .album-grid.simple-album-list .album-card.is-collapsed,
+.music-stage:has(.album-grid.simple-album-list) .album-grid.simple-album-list .album-card,
+.music-stage:has(.album-grid.simple-album-list) .album-grid.simple-album-list .album-card.is-collapsed {
+  background: rgba(8, 12, 22, 0.22);
+}
+.music-stage.simple-list-mode .album-grid.simple-album-list .album-card:hover,
+.music-stage.simple-list-mode .album-grid.simple-album-list .album-card:focus-visible,
+.music-stage:has(.album-grid.simple-album-list) .album-grid.simple-album-list .album-card:hover,
+.music-stage:has(.album-grid.simple-album-list) .album-grid.simple-album-list .album-card:focus-visible {
+  background: rgba(15, 25, 38, 0.38);
+}
+.music-stage.simple-list-mode .album-grid.simple-album-list .album-card.is-expanded,
+.music-stage:has(.album-grid.simple-album-list) .album-grid.simple-album-list .album-card.is-expanded {
+  background: rgba(8, 12, 22, 0.42);
+}
+
 .album-grid.simple-album-list { display:flex; flex-direction:column; gap:2px; }
 .album-grid.simple-album-list .album-card,
 .album-grid.simple-album-list .album-card.is-collapsed {

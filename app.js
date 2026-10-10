@@ -406,6 +406,8 @@ function trackCountLabel(n) {
 function renderAlbums(expandIndex = -1) {
   albumGrid.innerHTML = '';
   albumGrid.classList.toggle('simple-album-list', simpleAlbumList);
+  const stageEl = document.querySelector('.music-stage');
+  if (stageEl) stageEl.classList.toggle('simple-list-mode', simpleAlbumList);
   if (albumViewToggle) {
     albumViewToggle.setAttribute('aria-pressed', simpleAlbumList ? 'true' : 'false');
     /* The icon shows the view that will be activated when clicked. */
@@ -569,11 +571,13 @@ function renderTracksInto(container) {
     const row = document.createElement('article');
     row.className = 'track' + (sameTrack(i) ? ' active' : '');
     row.dataset.index = i;
+    row.draggable = true;
 
     const volPct = Math.round((audio.volume || 0.9) * 100);
 
     row.innerHTML = `
       <div class="track-play-wrap">
+        <span class="track-drag-handle" title="Перетащить" aria-hidden="true">⠿</span>
         <button type="button" class="card-play" data-track-index="${i}" aria-label="Воспроизвести">▶</button>
         <div class="track-no">${String(i + 1).padStart(2, '0')}</div>
       </div>
@@ -651,13 +655,16 @@ function renderTracksInto(container) {
         .catch(() => { /* leave —:— */ });
     }
 
+    let suppressClick = false;
     const toggle = () => toggleTrackPlay(i);
     row.querySelector('.card-play').onclick = e => {
       e.stopPropagation();
+      if (suppressClick) return;
       toggle();
     };
     row.onclick = e => {
-      if (e.target.closest('a') || e.target.closest('.track-vol') || e.target.closest('.vol-icon')) return;
+      if (suppressClick) { suppressClick = false; return; }
+      if (e.target.closest('a') || e.target.closest('.track-vol') || e.target.closest('.vol-icon') || e.target.closest('.track-drag-handle')) return;
       toggle();
     };
 
@@ -681,10 +688,71 @@ function renderTracksInto(container) {
 
     const volBarEl = row.querySelector('.track-vol-bar');
     if (volBarEl) bindTrackVolume(volBarEl);
+
+    /* Drag-and-drop reorder */
+    row.addEventListener('dragstart', e => {
+      if (e.target.closest('a, button, .track-vol, .vol-bar, .vol-icon')) {
+        e.preventDefault();
+        return;
+      }
+      suppressClick = true;
+      row.classList.add('is-dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', String(i));
+      try { e.dataTransfer.setData('application/x-track-index', String(i)); } catch (_) {}
+    });
+    row.addEventListener('dragend', () => {
+      row.classList.remove('is-dragging');
+      container.querySelectorAll('.track.drag-over').forEach(el => el.classList.remove('drag-over'));
+      /* Keep suppressClick true through the synthetic click that follows drag */
+      setTimeout(() => { suppressClick = false; }, 50);
+    });
+    row.addEventListener('dragover', e => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      container.querySelectorAll('.track.drag-over').forEach(el => {
+        if (el !== row) el.classList.remove('drag-over');
+      });
+      row.classList.add('drag-over');
+    });
+    row.addEventListener('dragleave', e => {
+      if (!row.contains(e.relatedTarget)) row.classList.remove('drag-over');
+    });
+    row.addEventListener('drop', e => {
+      e.preventDefault();
+      row.classList.remove('drag-over');
+      let from = parseInt(e.dataTransfer.getData('application/x-track-index') || e.dataTransfer.getData('text/plain'), 10);
+      const to = i;
+      if (!Number.isFinite(from) || from === to || from < 0 || from >= tracks.length) return;
+      reorderTracks(from, to);
+    });
   });
 
   updateMuteIcon();
   updatePlayButtons();
+}
+
+/** Reorder tracks in the current album list (from → to index). */
+function reorderTracks(from, to) {
+  if (from === to || from < 0 || to < 0 || from >= tracks.length || to >= tracks.length) return;
+
+  const [moved] = tracks.splice(from, 1);
+  tracks.splice(to, 0, moved);
+
+  if (activeAlbumIndex >= 0 && albums[activeAlbumIndex]) {
+    const albumTracks = albums[activeAlbumIndex].tracks || [];
+    if (albumTracks.length === tracks.length) {
+      const [movedAlbum] = albumTracks.splice(from, 1);
+      albumTracks.splice(to, 0, movedAlbum);
+    }
+  }
+
+  /* Keep current index pointing at the same logical track */
+  if (current === from) current = to;
+  else if (from < current && to >= current) current -= 1;
+  else if (from > current && to <= current) current += 1;
+
+  renderTracks();
 }
 
 function openLyricsPanel(trackIndex) {
@@ -1044,7 +1112,7 @@ function nextIndex() {
   return (current + 1) % tracks.length;
 }
 
-/** Next track; at end of album → first track of the next album (and so on). */
+/** Next track; at end of album list → first track of the same list (loop). */
 function playNextAcrossAlbums() {
   if (!tracks.length && !albums.length) return;
 
@@ -1065,21 +1133,11 @@ function playNextAcrossAlbums() {
     return;
   }
 
-  // End of current album (or empty queue) → next album with tracks
-  const start = activeAlbumIndex >= 0 ? activeAlbumIndex : 0;
-  if (albums.length) {
-    for (let step = 1; step <= albums.length; step++) {
-      const ai = (start + step) % albums.length;
-      const list = albums[ai].tracks || [];
-      if (!list.length) continue;
-      openAlbum(ai, false);
-      load(0, true);
-      return;
-    }
+  // End of current list → loop to first track in the same list
+  if (tracks.length) {
+    load(0, true);
+    return;
   }
-
-  // Fallback: restart current list
-  if (tracks.length) load(0, true);
 }
 
 function setNav(which) {
@@ -1228,7 +1286,7 @@ function goToMusic() {
   });
 })();
 
-/* Cover-to-cover: desktop wheel snap; mobile = native free scroll (no transitions) */
+/* Cover-to-cover: desktop wheel snap; drag on cover; mobile = native free scroll */
 if (snapMain) {
   const io = new IntersectionObserver(
     entries => {
@@ -1243,18 +1301,27 @@ if (snapMain) {
   const isCoarsePointer = () =>
     window.matchMedia('(hover: none), (pointer: coarse), (max-width: 700px)').matches;
 
+  const getSections = () => [...document.querySelectorAll('.cover')];
+  const nearestSectionIndex = () => {
+    const sections = getSections();
+    const y = snapMain.scrollTop;
+    return sections.reduce((bestIdx, section, i) =>
+      Math.abs(section.offsetTop - y) < Math.abs(sections[bestIdx].offsetTop - y) ? i : bestIdx, 0);
+  };
+
+  const goToCoverIndex = (targetIdx) => {
+    const sections = getSections();
+    if (targetIdx < 0 || targetIdx >= sections.length) return false;
+    if (scrollLock) return false;
+    smoothScrollToY(sections[targetIdx].offsetTop, 700);
+    return true;
+  };
+
   /* Mobile / touch: no JS cover transitions — native scroll only */
   if (isCoarsePointer()) {
     snapMain.classList.add('no-cover-snap');
   } else {
     let wheelGate = false;
-    const getSections = () => [...document.querySelectorAll('.cover')];
-    const nearestSectionIndex = () => {
-      const sections = getSections();
-      const y = snapMain.scrollTop;
-      return sections.reduce((bestIdx, section, i) =>
-        Math.abs(section.offsetTop - y) < Math.abs(sections[bestIdx].offsetTop - y) ? i : bestIdx, 0);
-    };
 
     /* Desktop: one eased step between covers. Ctrl/Meta handled by page zoom above. */
     snapMain.addEventListener('wheel', e => {
@@ -1269,13 +1336,65 @@ if (snapMain) {
       }
       e.preventDefault();
       if (scrollLock || wheelGate || !e.deltaY) return;
-      const sections = getSections();
       const targetIdx = nearestSectionIndex() + (e.deltaY > 0 ? 1 : -1);
-      if (targetIdx < 0 || targetIdx >= sections.length) return;
+      if (!goToCoverIndex(targetIdx)) return;
       wheelGate = true;
-      smoothScrollToY(sections[targetIdx].offsetTop, 700);
       setTimeout(() => { wheelGate = false; }, 720);
     }, { passive: false });
+  }
+
+  /* Drag mouse on cover background to flip between covers (desktop) */
+  if (!isCoarsePointer()) {
+    let coverDrag = null;
+    const COVER_DRAG_THRESHOLD = 56;
+
+    const onCoverPointerDown = e => {
+      if (e.button != null && e.button !== 0) return;
+      /* Only start on the cover itself / bg / shade / brand — not on interactive controls or scrollable list */
+      const interactive = e.target.closest(
+        'button, a, input, .music-panel, .track, .album-card, .lyrics-panel, .player, .nav, .track-vol, .vol-bar'
+      );
+      if (interactive) return;
+      const cover = e.target.closest('.cover');
+      if (!cover || !snapMain.contains(cover)) return;
+
+      coverDrag = {
+        startY: e.clientY,
+        startX: e.clientX,
+        pointerId: e.pointerId,
+        moved: false
+      };
+      try {
+        if (e.pointerId != null) snapMain.setPointerCapture(e.pointerId);
+      } catch (_) {}
+    };
+
+    const onCoverPointerMove = e => {
+      if (!coverDrag) return;
+      const dy = e.clientY - coverDrag.startY;
+      const dx = e.clientX - coverDrag.startX;
+      if (Math.abs(dy) > 8 || Math.abs(dx) > 8) coverDrag.moved = true;
+    };
+
+    const onCoverPointerUp = e => {
+      if (!coverDrag) return;
+      const dy = e.clientY - coverDrag.startY;
+      const wasMoved = coverDrag.moved;
+      coverDrag = null;
+      try {
+        if (e.pointerId != null) snapMain.releasePointerCapture(e.pointerId);
+      } catch (_) {}
+      if (!wasMoved || Math.abs(dy) < COVER_DRAG_THRESHOLD) return;
+      if (scrollLock) return;
+      /* Drag up (negative dy) → next cover; drag down → previous */
+      const targetIdx = nearestSectionIndex() + (dy < 0 ? 1 : -1);
+      goToCoverIndex(targetIdx);
+    };
+
+    snapMain.addEventListener('pointerdown', onCoverPointerDown);
+    snapMain.addEventListener('pointermove', onCoverPointerMove);
+    snapMain.addEventListener('pointerup', onCoverPointerUp);
+    snapMain.addEventListener('pointercancel', () => { coverDrag = null; });
   }
 }
 
