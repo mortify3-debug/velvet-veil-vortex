@@ -2077,7 +2077,7 @@ audio { display: none; }
 .music-stage:has(.album-grid.simple-album-list) .music-body {
   position: relative;
   z-index: 2;
-  margin-top: -52px; /* overlap slogan area */
+  margin-top: -28px; /* cover slogan only, leave Velvet logo visible */
 }
 .music-stage.simple-list-mode .music-panel,
 .music-stage:has(.album-grid.simple-album-list) .music-panel {

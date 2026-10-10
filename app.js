@@ -1346,7 +1346,7 @@ if (snapMain) {
   /* Drag mouse on cover background to flip between covers (desktop) */
   if (!isCoarsePointer()) {
     let coverDrag = null;
-    const COVER_DRAG_THRESHOLD = 56;
+    const COVER_DRAG_THRESHOLD = 19; /* ~1/3 of previous 56 */
 
     const onCoverPointerDown = e => {
       if (e.button != null && e.button !== 0) return;
