@@ -1,5 +1,13 @@
 [
   {
+    "id": "гравитация",
+    "title": "Гравитация",
+    "cover": "./assets/covers/gravitation.jpg",
+    "year": "",
+    "folder": "Гравитация",
+    "tracks": []
+  },
+  {
     "id": "отражение",
     "title": "Отражение",
     "cover": "./assets/covers/otrazhenie.jpg",
