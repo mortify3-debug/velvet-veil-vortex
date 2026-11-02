@@ -1,0 +1,5 @@
+
+User-agent: *
+Allow: /
+
+Sitemap: https://velvet-veil-vortex.mortify3.workers.dev/sitemap.xml
